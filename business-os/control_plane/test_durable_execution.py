@@ -300,6 +300,27 @@ class DurableExecutionTests(unittest.TestCase):
         self.assertEqual(self.ledger.list_ready_intents(), [])
         self.assertEqual(self.adapter.call_count, 0)
 
+    def test_private_backup_restores_outbox_destination_and_kill_switch(self):
+        result = self.submit()
+        self.ledger.activate_kill_switch()
+        backup = Path(self.temp.name) / "backup.sqlite3"
+        created = self.ledger.backup_to(backup)
+        restored = __import__("approval_grants").SQLiteGrantLedger(created)
+        intent = restored.get_intent(result["intent_id"])
+        self.assertEqual(intent["state"], "VERIFY_PENDING")
+        self.assertTrue(restored.kill_switch_active())
+        self.assertIsNotNone(restored.lookup_mock_destination_receipt("idem-1"))
+        self.assertTrue(restored.verify_execution_audit_chain())
+        self.assertTrue(restored.verify_execution_integrity())
+        self.assertEqual(stat.S_IMODE(backup.stat().st_mode), 0o600)
+
+    def test_backup_refuses_to_overwrite_existing_file(self):
+        backup = Path(self.temp.name) / "existing-backup.sqlite3"
+        backup.write_text("do not overwrite")
+        with self.assertRaises(ValueError):
+            self.ledger.backup_to(backup)
+        self.assertEqual(backup.read_text(), "do not overwrite")
+
     def test_execution_audit_chain_verifies_and_is_append_only(self):
         result = self.submit()
         self.assertTrue(self.ledger.verify_execution_audit_chain())
