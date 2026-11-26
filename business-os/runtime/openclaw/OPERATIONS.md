@@ -8,6 +8,7 @@ This is a staged local validation procedure, not an instruction to run unreviewe
 - Check out the `business-os/blueprint` branch.
 - Verify the official OpenClaw release and installation instructions.
 - Ensure Docker Engine/Desktop is installed and running for agent sandboxing.
+- Ensure Python 3 is available; the bootstrap helper uses it to reject symlinked or unsafe destination paths.
 - Do not sign the VPS into personal email, browser, password manager or personal cloud accounts.
 
 ## Workspace bootstrap
