@@ -663,7 +663,11 @@ class SQLiteGrantLedger:
             "budget_ledger": self.verify_budget_integrity(),
             "mock_destination": self.verify_mock_destination_integrity(),
         }
-        return {"ok": all(checks.values()), "checks": checks}
+        return {
+            "ok": all(checks.values()),
+            "kill_switch_active": self.kill_switch_active(),
+            "checks": checks,
+        }
 
     def consume(self, grant_id: str, grant_sha256: str) -> None:
         """Atomically claim a grant ID. Duplicate or raced claims are rejected."""
