@@ -348,6 +348,43 @@ class DurableExecutionTests(unittest.TestCase):
         self.assertEqual(usage["settled_minor"], 650)
         self.assertTrue(self.ledger.verify_execution_integrity())
 
+    def test_concurrent_budget_reservations_cannot_exceed_monthly_cap(self):
+        self.ledger.configure_budget(
+            period="2026-11", monthly_limit_minor=1000,
+            per_task_limit_minor=700, currency="USD",
+        )
+        cases = []
+        for index in (1, 2):
+            payload = {
+                **self.payload,
+                "_budget": {
+                    "reservation_id": f"concurrent-res-{index}",
+                    "amount_minor": 600,
+                    "currency": "USD",
+                    "period": "2026-11",
+                },
+            }
+            token = self.issue(payload=payload, task_id=f"concurrent-task-{index}", key=f"concurrent-key-{index}")
+            cases.append((token, payload, index))
+        def submit(case):
+            token, payload, index = case
+            try:
+                return self.gateway.submit(
+                    token, task_id=f"concurrent-task-{index}", payload=payload,
+                    adapter_name="mock", action="create", target="sandbox-object",
+                    idempotency_key=f"concurrent-key-{index}", requester_id="agent-1",
+                )["state"]
+            except DurableExecutionError:
+                return "DENIED"
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(submit, cases))
+        self.assertEqual(results.count("VERIFY_PENDING"), 1)
+        self.assertEqual(results.count("DENIED"), 1)
+        self.assertEqual(self.ledger.budget_usage("2026-11")["used_minor"], 600)
+        self.assertEqual(self.adapter.call_count, 1)
+        self.assertTrue(self.ledger.verify_execution_integrity())
+
     def test_monthly_budget_hard_stop_rolls_back_grant_and_intent(self):
         self.ledger.configure_budget(
             period="2026-11", monthly_limit_minor=1000,
