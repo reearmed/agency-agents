@@ -111,6 +111,14 @@ class OperationalGuardTests(unittest.TestCase):
         with self.assertRaises(AuditError):
             cp.reserve_budget("task-000001", 1)
 
+    def test_kill_switch_engages_even_if_audit_is_unavailable(self):
+        cp = InMemoryControlPlane(5, audit_available=False)
+        with self.assertRaises(AuditError):
+            cp.activate_kill_switch()
+        self.assertTrue(cp.kill_switch)
+        with self.assertRaises(BudgetError):
+            cp.reserve_budget("task-000001", 1)
+
     def test_idempotency_claim_is_atomic_under_race(self):
         cp = InMemoryControlPlane(5)
         with ThreadPoolExecutor(max_workers=12) as pool:
