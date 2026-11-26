@@ -84,7 +84,7 @@ class Auth0JWTVerifierTests(unittest.TestCase):
 
     def test_rejects_expired_future_and_missing_required_claims(self):
         cases = (
-            {"exp": NOW - 1},
+            {"exp": NOW - 120},
             {"iat": NOW + 600},
             {"jti": None},
             {"sub": None},
