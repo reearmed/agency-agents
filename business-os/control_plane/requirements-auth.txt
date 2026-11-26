@@ -1,0 +1,2 @@
+# Production OIDC/JWT verification dependency. Pin exact reviewed release.
+PyJWT[crypto]==2.15.1
