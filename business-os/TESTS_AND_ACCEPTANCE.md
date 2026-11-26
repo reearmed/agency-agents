@@ -57,7 +57,7 @@ Any failed critical security test blocks activation of external integrations.
 ## Current prototype evidence (not production acceptance)
 
 As of 26 November 2026, the isolated feature-branch CI run
-[45881412260](https://github.com/reearmed/agency-agents/actions/runs/45876789287)
+[45882203525](https://github.com/reearmed/agency-agents/actions/runs/45876789287)
 passed six JSON Schema fixtures, **122 Python unit tests**, JSON/YAML/JSON5
 configuration parsing, the synthetic bootstrap safety harness, and the
 budget-enabled synthetic control-plane end-to-end smoke test. The smoke test
