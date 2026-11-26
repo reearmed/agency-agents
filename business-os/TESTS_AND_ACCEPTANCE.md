@@ -55,7 +55,7 @@ Verified by hosted CI:
 - Synthetic bootstrap safety harness passed.
 - Budget-enabled synthetic durable control-plane E2E passed, including restart recovery, destination reconciliation, budget settlement, private backup verification and kill-switch enforcement.
 
-The latest changes also add strict bounded approval-token routing parsing with regression tests, plus a local identity-boundary component and a machine-readable OpenAPI control-plane contract with synthetic tests for Bearer parsing, issuer/audience, expiry/not-before/issued-at, token lifetime, scopes, roles and human-approver matching.
+The latest changes also add strict bounded approval-token routing parsing, identity-boundary and identity-to-approval integration tests, plus a machine-readable OpenAPI contract with static safety tests for bearer security, route scopes, sensitive-operation roles, strict request schemas and the absence of public execution routes.
 
 These results validate local reference code only. They do not constitute production acceptance. No HTTP API, production IdP/JWT verifier, independent external verifier, real adapter, hosted queue, multi-host coordination, provider invoice metering, off-host backup automation, OpenClaw runtime validation or 7-day pilot exists yet. The OpenClaw configuration remains an example, not an installed or runtime-validated system. No user Mac install, database creation, production access, paid provisioning or deployment has occurred.
 
