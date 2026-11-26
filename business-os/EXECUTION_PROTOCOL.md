@@ -34,14 +34,20 @@ If the adapter times out, do not blindly retry. Query the destination to determi
 
 ### Prototype boundary (not production authorization)
 
-The repository's `execution_gateway.py` is a test harness only. It accepts
-only a synthetic mock adapter and mock verifier; it is not an implementation
-of the real adapter protocol described above. Its execution state is volatile
-and cannot recover a process crash between grant consumption and adapter
-invocation. Do not connect email, publishing, payments, CRM, cloud, GitHub,
+The repository includes both the original in-memory `execution_gateway.py`
+test harness and the newer `durable_execution.py` mock-only worker. The
+durable worker stores grant consumption and the immutable execution intent
+in one SQLite transaction, recovers READY work after a pre-claim crash, and
+moves expired dispatch claims or adapter timeouts to UNKNOWN. It never
+blindly retries an ambiguous operation. Intent state changes are recorded
+in an append-only hash-chained event table.
+
+This remains a single-host prototype. Only the exact mock adapter and mock
+verifier are accepted. There is no authenticated control-plane API, production
+identity provider, independently authenticated verifier, real adapter,
+hosted queue, remote destination idempotency guarantee or backup/restore
+service. Do not connect email, publishing, payments, CRM, cloud, GitHub,
 production infrastructure or other real-world adapters to this prototype.
-A durable execution intent/outbox and authenticated service must be completed
-and tested before this boundary is revisited.
 
 ## 5. Verify and close
 
