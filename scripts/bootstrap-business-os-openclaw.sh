@@ -3,6 +3,10 @@
 # Dry-run is the default. Pass --apply to write. Existing files are never overwritten.
 set -euo pipefail
 
+if [[ -L "${BASH_SOURCE[0]}" ]]; then
+  echo "Refusing symlinked bootstrap script: ${BASH_SOURCE[0]}" >&2
+  exit 1
+fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SOURCE="$REPO_ROOT/business-os/agents"
@@ -60,6 +64,11 @@ if [[ -L "$DEST_ROOT" ]]; then
   echo "Refusing symlinked workspace root: $DEST_ROOT" >&2
   exit 1
 fi
+
+[[ -d "$SOURCE" && ! -L "$SOURCE" ]] || { echo "Missing or symlinked agent source directory: $SOURCE" >&2; exit 1; }
+for policy_file in "$REPO_ROOT/business-os/AUTONOMY.md" "$REPO_ROOT/business-os/TASK_CONTRACT.md"; do
+  [[ -f "$policy_file" && ! -L "$policy_file" ]] || { echo "Missing or symlinked policy source: $policy_file" >&2; exit 1; }
+done
 
 for item in "${MAP[@]}"; do
   id="${item%%:*}"
