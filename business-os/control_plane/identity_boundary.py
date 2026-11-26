@@ -63,17 +63,28 @@ class IdentityBoundary:
 
     @staticmethod
     def _timestamp(value: Any, name: str) -> float:
-        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
             raise IdentityError(f"token {name} claim is invalid")
-        return float(value)
+        try:
+            numeric = float(value)
+        except (OverflowError, ValueError) as exc:
+            raise IdentityError(f"token {name} claim is invalid") from exc
+        if not math.isfinite(numeric):
+            raise IdentityError(f"token {name} claim is invalid")
+        return numeric
 
     def authenticate(self, authorization_header: str) -> VerifiedPrincipal:
         if not isinstance(authorization_header, str) or len(authorization_header) > 16400:
             raise IdentityError("bearer authorization header is missing or too large")
-        parts = authorization_header.split()
-        if len(parts) != 2 or parts[0].lower() != "bearer" or not parts[1] or len(parts[1]) > 16384:
+        scheme, separator, token = authorization_header.partition(" ")
+        if (
+            not separator
+            or scheme.lower() != "bearer"
+            or not token
+            or any(char.isspace() for char in token)
+            or len(token) > 16384
+        ):
             raise IdentityError("a single bounded bearer token is required")
-        token = parts[1]
         try:
             claims = self._token_verifier(token)
         except Exception as exc:
@@ -101,7 +112,12 @@ class IdentityBoundary:
         ):
             raise IdentityError("token audience mismatch")
 
-        now = self._timestamp(self._clock(), "clock")
+        try:
+            now = self._timestamp(self._clock(), "clock")
+        except IdentityError:
+            raise
+        except Exception as exc:
+            raise IdentityError("trusted clock is unavailable") from exc
         issued_at = self._timestamp(claims.get("iat"), "issued-at")
         expires_at = self._timestamp(claims.get("exp"), "expiry")
         not_before = self._timestamp(claims.get("nbf", issued_at), "not-before")
