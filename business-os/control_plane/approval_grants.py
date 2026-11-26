@@ -179,6 +179,49 @@ class SQLiteGrantLedger:
             previous = row["event_hash"]
         return True
 
+    def verify_execution_integrity(self) -> bool:
+        """Check current immutable intent rows against their original audit events."""
+        conn = self._connect()
+        try:
+            intents = conn.execute("SELECT * FROM execution_intents").fetchall()
+            events = conn.execute(
+                "SELECT intent_id, details_json FROM execution_events WHERE event='intent_created'"
+            ).fetchall()
+        finally:
+            conn.close()
+        created = {}
+        for event in events:
+            if event["intent_id"] in created:
+                return False
+            try:
+                created[event["intent_id"]] = json.loads(event["details_json"])
+            except (TypeError, json.JSONDecodeError):
+                return False
+        if len(created) != len(intents):
+            return False
+        for intent in intents:
+            details = created.get(intent["intent_id"])
+            if not details:
+                return False
+            try:
+                actual_hash = payload_sha256(json.loads(intent["operation_json"]))
+            except Exception:
+                return False
+            expected = {
+                "grant_id": intent["grant_id"],
+                "task_id": intent["task_id"],
+                "idempotency_key": intent["idempotency_key"],
+                "operation_sha256": intent["operation_sha256"],
+                "adapter": intent["adapter"],
+                "action": intent["action"],
+                "target": intent["target"],
+            }
+            if actual_hash != intent["operation_sha256"] or any(
+                details.get(key) != value for key, value in expected.items()
+            ):
+                return False
+        return True
+
     def consume(self, grant_id: str, grant_sha256: str) -> None:
         """Atomically claim a grant ID. Duplicate or raced claims are rejected."""
         conn = self._connect()
@@ -232,7 +275,9 @@ class SQLiteGrantLedger:
             self._append_execution_event(conn, intent["intent_id"], "intent_created",
                                         grant_id=grant_id, task_id=intent["task_id"],
                                         idempotency_key=intent["idempotency_key"],
-                                        operation_sha256=intent["operation_sha256"])
+                                        operation_sha256=intent["operation_sha256"],
+                                        adapter=intent["adapter"], action=intent["action"],
+                                        target=intent["target"])
             conn.commit()
         except sqlite3.IntegrityError as exc:
             conn.rollback()
