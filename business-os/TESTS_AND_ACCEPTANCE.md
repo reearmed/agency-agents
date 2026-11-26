@@ -49,7 +49,7 @@ Run a 7-day internal-only pilot using synthetic or explicitly approved low-risk 
 
 ## Current prototype evidence (26 November 2026)
 
-Latest feature-branch CI run: [45886256258](https://github.com/reearmed/agency-agents/actions/runs/45886256258), on commit `09f0ba6df0e0cce64ceab76b2703f7e7adb53c3b`.
+Latest feature-branch CI run: [45886957661](https://github.com/reearmed/agency-agents/actions/runs/45886957661), on commit `7678bb76830cebd1b204473debfaf7199c742d5b`.
 
 Verified by hosted CI:
 - **155 Python unit tests passed** (`Ran 155 tests ... OK`).
@@ -59,7 +59,7 @@ Verified by hosted CI:
 - Synthetic bootstrap safety harness passed.
 - Budget-enabled synthetic durable control-plane E2E passed, including restart recovery, destination reconciliation, budget settlement, private backup verification and kill-switch enforcement.
 
-The latest changes also add strict bounded approval-token routing parsing, identity-boundary and identity-to-approval integration tests, plus a machine-readable OpenAPI contract and a separate independent destination-evidence verifier contract. Tests bind verifier identity separately from requester/executor, require exact destination evidence, and reject unauthenticated, stale, mismatched or inconclusive outcomes. API scope/role extensions are checked against the identity allowlist.
+The latest changes also add strict bounded approval-token routing parsing, identity-boundary and identity-to-approval integration tests, plus a machine-readable OpenAPI contract and a separate independent destination-evidence verifier contract. Tests bind verifier identity separately from requester/executor, require exact destination evidence, reject unauthenticated, stale, mismatched or inconclusive outcomes, and exercise namespaced Auth0-style role claims. API scope/role extensions are checked against the identity allowlist.
 
 These results validate local reference code only. They do not constitute production acceptance. No HTTP API, production IdP/JWT verifier, independent external verifier, real adapter, hosted queue, multi-host coordination, provider invoice metering, off-host backup automation, OpenClaw runtime validation or 7-day pilot exists yet. The OpenClaw configuration remains an example, not an installed or runtime-validated system. No user Mac install, database creation, production access, paid provisioning or deployment has occurred.
 
