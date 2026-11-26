@@ -22,8 +22,10 @@ portfolio:
   max_active_experiments: 2
 
 runtime:
-  provider: undecided
+  provider: openclaw_candidate_not_installed
   environment: isolated_nonproduction
+  gateway_status: not_installed
+  sandbox_backend_required: true
   always_on_worker_required: true
   concurrency: 1
   task_timeout_seconds: 900
