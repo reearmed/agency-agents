@@ -21,7 +21,7 @@ class ExecutionGatewayTests(unittest.TestCase):
             identity_verifier=lambda actor, context: actor == "human" and context == "ok",
         )
         self.operation = {"kind": "draft_only", "content": "synthetic test"}
-        self.now = datetime(2026, 11, 26, 18, 0, tzinfo=timezone.utc)
+        self.now = datetime.now(timezone.utc)
         self.adapter = MockAdapter()
         self.verifier = MockOutcomeVerifier()
         self.kill_switch = False
