@@ -98,6 +98,16 @@ class SQLiteGrantLedger:
                 created_at TEXT NOT NULL
             )""")
             conn.executescript("""
+                CREATE TRIGGER IF NOT EXISTS execution_intents_immutable_fields
+                BEFORE UPDATE OF intent_id, grant_id, task_id, idempotency_key, operation_json,
+                    operation_sha256, adapter, action, target, created_at
+                ON execution_intents
+                BEGIN SELECT RAISE(ABORT, 'execution intent proposal fields are immutable'); END;
+                CREATE TRIGGER IF NOT EXISTS execution_intents_no_delete
+                BEFORE DELETE ON execution_intents
+                BEGIN SELECT RAISE(ABORT, 'execution intents cannot be deleted'); END;
+            """)
+            conn.executescript("""
                 CREATE TRIGGER IF NOT EXISTS execution_events_no_update
                 BEFORE UPDATE ON execution_events
                 BEGIN SELECT RAISE(ABORT, 'execution_events is append-only'); END;
