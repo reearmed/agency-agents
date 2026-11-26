@@ -1031,6 +1031,34 @@ class SQLiteGrantLedger:
         finally:
             conn.close()
 
+    def list_intents(self, *, state: str | None = None, limit: int = 100) -> list[Mapping[str, Any]]:
+        """List safe operational summaries without exposing operation payloads."""
+        states = {"READY", "DISPATCHING", "VERIFY_PENDING", "UNKNOWN", "SUCCEEDED", "FAILED"}
+        if state is not None and state not in states:
+            raise GrantError("unsupported intent state filter")
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 500:
+            raise GrantError("intent list limit must be between 1 and 500")
+        columns = (
+            "intent_id, grant_id, task_id, idempotency_key, adapter, action, target, "
+            "state, attempt_count, created_at, updated_at, lease_owner, lease_expires_at, "
+            "evidence_sha256, last_error"
+        )
+        conn = self._connect()
+        try:
+            if state is None:
+                rows = conn.execute(
+                    f"SELECT {columns} FROM execution_intents ORDER BY created_at DESC LIMIT ?",
+                    (limit,),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    f"SELECT {columns} FROM execution_intents WHERE state=? ORDER BY created_at DESC LIMIT ?",
+                    (state, limit),
+                ).fetchall()
+            return [dict(row) for row in rows]
+        finally:
+            conn.close()
+
     def get_intent(self, intent_id: str) -> Mapping[str, Any] | None:
         conn = self._connect()
         try:
