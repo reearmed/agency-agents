@@ -593,6 +593,8 @@ class ApprovalGrantAuthority:
             task_id, adapter, action, target, idempotency_key, requester_id, approver_id
         )):
             raise GrantError("task, scope, idempotency and actor fields are required")
+        if self._ledger.kill_switch_active():
+            raise GrantError("persistent kill switch active; new approvals are paused")
         if requester_id == approver_id:
             raise GrantError("self-approval is prohibited")
         if not isinstance(ttl_seconds, int) or not 1 <= ttl_seconds <= self._max_ttl:
