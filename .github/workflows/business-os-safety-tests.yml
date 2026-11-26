@@ -73,3 +73,6 @@ jobs:
       - name: Run isolated guardrail tests
         working-directory: business-os/control_plane
         run: python -m unittest -v
+      - name: Run synthetic durable control-plane end-to-end test
+        working-directory: business-os/control_plane
+        run: python synthetic_e2e.py
