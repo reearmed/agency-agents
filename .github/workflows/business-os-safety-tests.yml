@@ -37,6 +37,8 @@ jobs:
           root = Path("business-os/contracts")
           cases = [
               ("task-envelope.schema.json", "fixtures/task-valid.json", True),
+              ("task-envelope.schema.json", "fixtures/task-valid-budget.json", True),
+              ("task-envelope.schema.json", "fixtures/task-invalid-budget-fractional.json", False),
               ("task-envelope.schema.json", "fixtures/task-invalid-unknown-field.json", False),
               ("approval-envelope.schema.json", "fixtures/approval-valid.json", True),
               ("approval-envelope.schema.json", "fixtures/approval-invalid-bad-hash.json", False),
