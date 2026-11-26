@@ -318,6 +318,19 @@ class DurableExecutionTests(unittest.TestCase):
             conn.close()
         self.assertTrue(self.ledger.verify_execution_integrity())
 
+    def test_privileged_execution_audit_tampering_is_detected(self):
+        self.submit()
+        conn = sqlite3.connect(self.db)
+        try:
+            conn.execute("DROP TRIGGER execution_events_no_update")
+            conn.execute(
+                "UPDATE execution_events SET details_json='{}' WHERE sequence=1"
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        self.assertFalse(self.ledger.verify_execution_audit_chain())
+
     def test_privileged_intent_payload_tampering_is_detected(self):
         result = self.submit()
         conn = sqlite3.connect(self.db)
