@@ -83,6 +83,20 @@ class SQLiteGrantLedger:
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )""")
+            conn.execute("""CREATE TABLE IF NOT EXISTS mock_destination_receipts (
+                idempotency_key TEXT PRIMARY KEY,
+                operation_sha256 TEXT NOT NULL,
+                result TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )""")
+            conn.executescript("""
+                CREATE TRIGGER IF NOT EXISTS mock_receipts_no_update
+                BEFORE UPDATE ON mock_destination_receipts
+                BEGIN SELECT RAISE(ABORT, 'mock destination receipts are immutable'); END;
+                CREATE TRIGGER IF NOT EXISTS mock_receipts_no_delete
+                BEFORE DELETE ON mock_destination_receipts
+                BEGIN SELECT RAISE(ABORT, 'mock destination receipts are immutable'); END;
+            """)
             conn.execute("""CREATE TABLE IF NOT EXISTS control_state (
                 key TEXT PRIMARY KEY,
                 value TEXT NOT NULL
@@ -373,6 +387,55 @@ class SQLiteGrantLedger:
             if conn.in_transaction:
                 conn.rollback()
             raise
+        finally:
+            conn.close()
+
+    def record_mock_destination_acceptance(self, idempotency_key: str,
+                                           operation: Mapping[str, Any]) -> Mapping[str, Any]:
+        """Persist a synthetic destination receipt with durable idempotency semantics."""
+        if not idempotency_key:
+            raise GrantError("mock destination idempotency key required")
+        digest = payload_sha256(operation)
+        now = datetime.now(timezone.utc).isoformat()
+        conn = self._connect()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                "SELECT * FROM mock_destination_receipts WHERE idempotency_key=?",
+                (idempotency_key,),
+            ).fetchone()
+            if row:
+                if row["operation_sha256"] != digest:
+                    raise GrantError("mock destination idempotency key reused for different operation")
+                conn.commit()
+                return dict(row)
+            conn.execute(
+                """INSERT INTO mock_destination_receipts
+                   (idempotency_key, operation_sha256, result, created_at)
+                   VALUES (?, ?, 'mock-accepted', ?)""",
+                (idempotency_key, digest, now),
+            )
+            created = conn.execute(
+                "SELECT * FROM mock_destination_receipts WHERE idempotency_key=?",
+                (idempotency_key,),
+            ).fetchone()
+            conn.commit()
+            return dict(created)
+        except Exception:
+            if conn.in_transaction:
+                conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+    def lookup_mock_destination_receipt(self, idempotency_key: str) -> Mapping[str, Any] | None:
+        conn = self._connect()
+        try:
+            row = conn.execute(
+                "SELECT * FROM mock_destination_receipts WHERE idempotency_key=?",
+                (idempotency_key,),
+            ).fetchone()
+            return dict(row) if row else None
         finally:
             conn.close()
 
