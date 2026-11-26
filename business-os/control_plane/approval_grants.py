@@ -487,6 +487,7 @@ class SQLiteGrantLedger:
             target[key] = details
         if len(configured) != len(limits) or len(reserved) != len(reservations):
             return False
+        limit_map = {row["period"]: row for row in limits}
         for limit in limits:
             details = configured.get(limit["period"])
             if not details or any(details.get(key) != value for key, value in {
@@ -496,6 +497,7 @@ class SQLiteGrantLedger:
             }.items()):
                 return False
         reservation_map = {row["task_id"]: row for row in reservations}
+        used_by_period: dict[str, int] = {}
         for intent in intents:
             try:
                 budget = json.loads(intent["budget_reservation_json"]) if intent["budget_reservation_json"] else None
@@ -509,6 +511,10 @@ class SQLiteGrantLedger:
             if row is None:
                 return False
             details = reserved.get(intent["task_id"])
+            limit = limit_map.get(row["period"])
+            if (not limit or row["currency"] != limit["currency"]
+                    or row["amount_minor"] > limit["per_task_limit_minor"]):
+                return False
             expected = {
                 "reservation_id": row["reservation_id"],
                 "amount_minor": row["amount_minor"],
@@ -524,13 +530,21 @@ class SQLiteGrantLedger:
             if row["state"] == "RESERVED":
                 if settled_event or released_event or row["actual_minor"] is not None:
                     return False
+                used_by_period[row["period"]] = used_by_period.get(row["period"], 0) + row["amount_minor"]
             elif row["state"] == "SETTLED":
-                if not settled_event or released_event or settled_event.get("actual_minor") != row["actual_minor"]:
+                if (not settled_event or released_event
+                        or settled_event.get("actual_minor") != row["actual_minor"]
+                        or row["actual_minor"] is None
+                        or row["actual_minor"] > row["amount_minor"]):
                     return False
+                used_by_period[row["period"]] = used_by_period.get(row["period"], 0) + row["actual_minor"]
             elif row["state"] == "RELEASED":
                 if not released_event or settled_event or row["actual_minor"] is not None:
                     return False
             else:
+                return False
+        for period, used in used_by_period.items():
+            if used > limit_map[period]["monthly_limit_minor"]:
                 return False
         return True
 
