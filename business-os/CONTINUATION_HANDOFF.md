@@ -48,10 +48,9 @@ The user wants useful autonomous work, not just an architecture document. Keep m
 ## What has been done
 
 A branch named `business-os/blueprint` was created from `main`. The latest verified comparison before this handoff showed:
-- branch status: ahead;
-- ahead by 77 commits;
-- behind by 2 commits (main contains an add/delete correction pair; its file tree was restored to the prior state);
+- most recent comparison before this handoff cleanup: 86 commits ahead and 2 behind;
 - 48 changed paths;
+- the two commits on main not in this branch are the accidental handoff add/delete correction pair. The file is absent from main again; do not rewrite history, merge, or rebase without explicit approval.
 - changed paths are within `business-os/`, `scripts/bootstrap-business-os-openclaw.sh`, and the dedicated test-only workflow `.github/workflows/business-os-safety-tests.yml`.
 
 The two commits on `main` not in this branch are an accidental add/delete correction pair for the handoff file. The file has been removed from `main`, restoring its prior file tree; do not rewrite main history. No other main files were changed by this work. Verify this comparison again before acting; it may have changed.
@@ -67,9 +66,10 @@ The two commits on `main` not in this branch are an accidental add/delete correc
 - Guarded autonomy policy, task contract, deployment runbook and activation blockers.
 - Control-plane specification, exact-payload execution protocol, security acceptance tests, incident-response runbook and implementation backlog.
 - Added strict task/approval JSON Schemas and valid/invalid fixtures under `business-os/contracts/`.
-- Added local-only in-memory control-plane primitives and unit tests under `business-os/control_plane/` for canonical payload hashing, approval binding, state transitions, idempotency, budget caps and fail-closed audit behavior, including a kill switch that still engages when audit logging is unavailable.
+- Added local-only in-memory control-plane primitives and unit tests under `business-os/control_plane/` for canonical payload hashing, immutable proposed-payload binding, approval scope/expiry/replay checks, state transitions, idempotency, budget caps and fail-closed audit behavior, including a kill switch that still engages when audit logging is unavailable.
+- Hardened terminal outcomes: generic transitions cannot mark tasks succeeded/failed; a verifier identity and SHA-256 evidence reference are required to record a terminal outcome. Ambiguous adapter outcomes can remain unknown pending reconciliation. These remain test-only trust parameters, not authenticated verification.
 - Added `.github/workflows/business-os-safety-tests.yml` to validate schemas/fixtures and run unit tests on the feature branch.
-- Tightened the OpenClaw example using current documentation for sandbox backend controls, `tools.agentToAgent`, session visibility, and per-agent subagent allowlists.
+- Tightened the OpenClaw example using current documentation for Docker sandbox backend controls, tools.agentToAgent, session visibility, subagent allowlists and depth limits; added an explicit sandbox tool allowlist and removed an undocumented config key.
 
 ### Important implementation distinction
 The local `business-os/control_plane/` code is a test prototype only, not a running enforcement service. It uses in-memory state, has no authenticated identity service or external adapters, and is not safe for production or multi-process execution. CI has been configured, but its result must be verified before claiming tests pass. The control-plane and execution documents remain specifications for the production implementation. The database schema is a reference schema, not an applied migration. The OpenClaw config is an example, not installed or runtime-validated. The bootstrap script has not been run on the user's Mac. No server, database, model provider, API credentials, schedule or integrations have been provisioned.
@@ -127,15 +127,11 @@ Continue my existing Business OS implementation from the GitHub repository https
 
 ## Verified work notes
 
-- The bootstrap script content was checked with `bash -n` in an isolated temporary environment; syntax check passed. `shellcheck` was unavailable. The script was not applied.
-- Current upstream OpenClaw documentation supports the `tools.gatewayPolicy`, `tools.agentToAgent`, `tools.sessions.visibility`, `agents.entries.*.subagents.allowAgents`, and Docker sandbox configuration concepts. The example still requires `openclaw config schema` validation using the exact pinned release before installation.
-- The GitHub Actions workflow is committed, but the connector did not expose a run result and commit status is empty. Do not claim CI passed.
-
-## Verified work notes
-
-- The bootstrap script content was checked with `bash -n` in an isolated temporary environment; syntax check passed. `shellcheck` was unavailable. The script was not applied.
-- Current upstream OpenClaw documentation supports the `tools.gatewayPolicy`, `tools.agentToAgent`, `tools.sessions.visibility`, `agents.entries.*.subagents.allowAgents`, and Docker sandbox configuration concepts. The example still requires `openclaw config schema` validation using the exact pinned release before installation.
-- The GitHub Actions workflow is committed, but a workflow run result could not be retrieved through the available GitHub actions interface and commit status is empty. Do not claim CI passed.
+- The bootstrap script content was checked with bash -n in an isolated temporary environment; syntax check passed. shellcheck was unavailable. The script was not applied.
+- The control-plane prototype now stores the original task payload hash at proposal time and requires the approval to match it. Terminal success/failure cannot be reached through the generic transition method; the test API requires a verifier identifier and a 64-character SHA-256 evidence reference. Twenty-one unit tests are present, but a successful test run has not yet been confirmed.
+- The OpenClaw example now explicitly limits sandbox tools, sets Docker network to none, uses a read-only container root, drops all Linux capabilities, keeps session visibility at tree, disables ordinary agent-to-agent access, and limits child depth to one. Current official docs support these configuration concepts. The exact example still needs validation with the selected pinned OpenClaw binary and an actual sandbox smoke test.
+- The GitHub Actions workflow is committed and push-triggered on this branch, but the available connector did not expose the workflow run list/result. Commit status was empty. Do not claim CI passed.
+- The latest comparison before this handoff edit was 86 commits ahead / 2 behind, with 48 changed paths. All changed paths were within business-os/, scripts/bootstrap-business-os-openclaw.sh, and .github/workflows/business-os-safety-tests.yml. The two behind commits are the accidental add/delete correction pair on main; the file was removed from main again. No merge, rebase, PR, or deployment has occurred.
 
 ## Final truth statement
 
