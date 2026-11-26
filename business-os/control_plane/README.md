@@ -76,6 +76,27 @@ gateway restarts, but it does not make a remote side effect exactly-once: a
 real destination must provide durable idempotency and authoritative lookup
 semantics. The older `execution_gateway.py` remains an in-memory test harness.
 
+## Local transactional budget ledger
+
+The durable outbox can reserve a per-task budget in the same SQLite transaction
+that consumes the signed approval grant and creates the immutable execution
+intent. The reservation is carried inside the approved payload as `_budget`
+and uses integer minor currency units (for example, cents), an ISO currency
+code, a monthly `YYYY-MM` period and a unique reservation ID. A period must
+have an operator-configured monthly and per-task hard limit before a budgeted
+intent can be accepted. Limits are immutable through the application API;
+raising a limit requires a controlled offline change.
+
+Budget reservations count against the monthly cap while RESERVED. Settlement
+requires a reconciled terminal execution with evidence and cannot exceed the
+approved per-task reservation. Release requires a reconciled FAILED outcome,
+evidence and an explicit no-effect confirmation. Budget changes and
+reservations are included in the append-only audit chain and verified during
+backup. This is a local accounting prototype only: it does not meter actual
+model/API invoices, provide alerts, support multiple hosts or authenticate the
+operator who configures limits or confirms no-effect outcomes. No paid action
+or real adapter is enabled.
+
 ## Private local backup
 
 `SQLiteGrantLedger.backup_to(path)` uses SQLite's online backup API to create
@@ -92,7 +113,7 @@ This is not a production control plane:
 
 - There is no authenticated network API, production identity provider, session validation, role management, key rotation, revocation service or independent verifier identity. The injected identity callback is a test seam, not proof of production authentication.
 - Evidence SHA-256 values are produced by the mock verifier; no external destination evidence is fetched or independently validated.
-- There is no real adapter, hosted queue, multi-host coordination, budget reconciliation/refund service, alerting, off-host backup automation or independently administered emergency control. The local manual backup helper is not a disaster-recovery service.
+- There is no real adapter, hosted queue, multi-host coordination, invoice metering/reconciliation/refund service, alerting, off-host backup automation or independently administered emergency control. The local budget ledger and manual backup helper are reference implementations, not production services.
 - SQLite is a single-host prototype. WAL and transactional locking do not make it a distributed coordination service.
 - Audit triggers and the hash chain are tamper-evident, not tamper-proof against a privileged database operator who can rewrite the file or remove triggers.
 - The local persistent kill switch is stored in the same SQLite database and is not independently administered or distributed. A caller-supplied callback is also checked by the gateway; neither mechanism replaces a separately hosted emergency control.
