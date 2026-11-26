@@ -7,6 +7,7 @@ No real adapters are supported.
 """
 from __future__ import annotations
 
+import base64
 import json
 from typing import Any, Mapping
 from approval_grants import ApprovalGrantAuthority, GrantError, SQLiteGrantLedger
@@ -102,10 +103,39 @@ class DurableMockExecutionGateway:
 
     @staticmethod
     def _grant_id_from_token(token: str) -> str:
-        import base64
-        encoded = token.split(".", 1)[0]
-        raw = base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4))
-        return json.loads(raw.decode("utf-8"))["grant_id"]
+        """Extract a bounded routing hint; cryptographic validation happens separately.
+
+        The returned ID is untrusted until ApprovalGrantAuthority verifies the
+        HMAC, schema, expiry and exact request scope. Strict bounds and decoding
+        here prevent malformed input from escaping as parser exceptions or
+        causing unbounded work before that verification.
+        """
+        if not isinstance(token, str) or len(token) > 16449 or token.count(".") != 1:
+            raise DurableExecutionError("malformed approval grant")
+        encoded, signature = token.split(".", 1)
+        if not encoded or len(encoded) > 16384 or len(signature) != 64:
+            raise DurableExecutionError("malformed approval grant")
+        if any(char not in "0123456789abcdef" for char in signature):
+            raise DurableExecutionError("malformed approval grant")
+        try:
+            raw = base64.b64decode(
+                encoded + "=" * (-len(encoded) % 4),
+                altchars=b"-_",
+                validate=True,
+            )
+            grant = json.loads(raw.decode("utf-8"))
+        except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise DurableExecutionError("malformed approval grant") from exc
+        if not isinstance(grant, dict) or grant.get("version") != 1:
+            raise DurableExecutionError("malformed approval grant")
+        grant_id = grant.get("grant_id")
+        if (
+            not isinstance(grant_id, str)
+            or not 16 <= len(grant_id) <= 128
+            or any(char not in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_" for char in grant_id)
+        ):
+            raise DurableExecutionError("malformed approval grant")
+        return grant_id
 
     def dispatch_ready(self, intent_id: str, *, worker_id: str) -> Mapping[str, Any]:
         if self.kill_switch_check() is not False:
