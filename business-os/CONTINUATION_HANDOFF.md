@@ -49,12 +49,12 @@ The user wants useful autonomous work, not just an architecture document. Keep m
 
 A branch named `business-os/blueprint` was created from `main`. The latest verified comparison before this handoff showed:
 - branch status: ahead;
-- ahead by 73 commits;
+- ahead by 74 commits;
 - behind by 2 commits (main contains an add/delete correction pair; its file tree was restored to the prior state);
 - 48 changed paths;
 - changed paths are within `business-os/`, `scripts/bootstrap-business-os-openclaw.sh`, and the dedicated test-only workflow `.github/workflows/business-os-safety-tests.yml`.
 
-Verify this comparison again before acting; it may have changed.
+The two commits on `main` not in this branch are an accidental add/delete correction pair for the handoff file. The file has been removed from `main`, restoring its prior file tree; do not rewrite main history. No other main files were changed by this work. Verify this comparison again before acting; it may have changed.
 
 ### Repository deliverables
 - Business OS architecture, data/security and memory design.
@@ -124,6 +124,12 @@ The local `business-os/control_plane/` code is a test prototype only, not a runn
 ## Ready-to-paste prompt for the next chat
 
 Continue my existing Business OS implementation from the GitHub repository https://github.com/reearmed/agency-agents, branch `business-os/blueprint`. Do not restart or rebuild from scratch. First inspect the current repository and branch state, then read `business-os/CONTINUATION_HANDOFF.md` and the linked core docs. Continue from the exact current state, prioritizing real implementation and tests over more documentation. Work autonomously on safe, isolated repository tasks and use multiple independent tools where appropriate. Keep all changes on `business-os/blueprint`; do not merge, create a PR, change main, deploy production, modify NOREVYO production, touch its Supabase project, or incur any paid costs. Do not send messages, publish, contact prospects, purchase, transact, or enable external integrations without exact approval. Report verified completed work, blockers, and the next concrete action. Never claim something is running unless it has actually been installed and tested.
+
+## Verified work notes
+
+- The bootstrap script content was checked with `bash -n` in an isolated temporary environment; syntax check passed. `shellcheck` was unavailable. The script was not applied.
+- Current upstream OpenClaw documentation supports the `tools.gatewayPolicy`, `tools.agentToAgent`, `tools.sessions.visibility`, `agents.entries.*.subagents.allowAgents`, and Docker sandbox configuration concepts. The example still requires `openclaw config schema` validation using the exact pinned release before installation.
+- The GitHub Actions workflow is committed, but the connector did not expose a run result and commit status is empty. Do not claim CI passed.
 
 ## Final truth statement
 
