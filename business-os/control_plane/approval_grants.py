@@ -11,6 +11,7 @@ from datetime import datetime, timedelta, timezone
 import base64
 import hashlib
 import hmac
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -82,6 +83,23 @@ class SQLiteGrantLedger:
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )""")
+            conn.execute("""CREATE TABLE IF NOT EXISTS execution_events (
+                sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+                intent_id TEXT NOT NULL,
+                event TEXT NOT NULL,
+                details_json TEXT NOT NULL,
+                previous_hash TEXT NOT NULL,
+                event_hash TEXT NOT NULL UNIQUE,
+                created_at TEXT NOT NULL
+            )""")
+            conn.executescript("""
+                CREATE TRIGGER IF NOT EXISTS execution_events_no_update
+                BEFORE UPDATE ON execution_events
+                BEGIN SELECT RAISE(ABORT, 'execution_events is append-only'); END;
+                CREATE TRIGGER IF NOT EXISTS execution_events_no_delete
+                BEFORE DELETE ON execution_events
+                BEGIN SELECT RAISE(ABORT, 'execution_events is append-only'); END;
+            """)
             conn.executescript("""
                 CREATE TRIGGER IF NOT EXISTS consumed_grants_no_update
                 BEFORE UPDATE ON consumed_grants
@@ -101,6 +119,49 @@ class SQLiteGrantLedger:
         conn.execute("PRAGMA busy_timeout = 10000")
         conn.execute("PRAGMA synchronous = FULL")
         return conn
+
+    def _append_execution_event(self, conn: sqlite3.Connection, intent_id: str,
+                                event: str, **details: Any) -> None:
+        row = conn.execute(
+            "SELECT event_hash FROM execution_events ORDER BY sequence DESC LIMIT 1"
+        ).fetchone()
+        previous = row[0] if row else "0" * 64
+        created = datetime.now(timezone.utc).isoformat()
+        details_json = canonical_json(details).decode("utf-8")
+        event_hash = hashlib.sha256(canonical_json({
+            "intent_id": intent_id, "event": event, "details": details,
+            "previous_hash": previous, "created_at": created,
+        })).hexdigest()
+        conn.execute(
+            """INSERT INTO execution_events
+               (intent_id, event, details_json, previous_hash, event_hash, created_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (intent_id, event, details_json, previous, event_hash, created),
+        )
+
+    def verify_execution_audit_chain(self) -> bool:
+        conn = self._connect()
+        try:
+            rows = conn.execute(
+                """SELECT intent_id, event, details_json, previous_hash, event_hash, created_at
+                   FROM execution_events ORDER BY sequence"""
+            ).fetchall()
+        finally:
+            conn.close()
+        previous = "0" * 64
+        for row in rows:
+            if row["previous_hash"] != previous:
+                return False
+            details = json.loads(row["details_json"])
+            expected = hashlib.sha256(canonical_json({
+                "intent_id": row["intent_id"], "event": row["event"],
+                "details": details, "previous_hash": previous,
+                "created_at": row["created_at"],
+            })).hexdigest()
+            if expected != row["event_hash"]:
+                return False
+            previous = row["event_hash"]
+        return True
 
     def consume(self, grant_id: str, grant_sha256: str) -> None:
         """Atomically claim a grant ID. Duplicate or raced claims are rejected."""
@@ -147,6 +208,10 @@ class SQLiteGrantLedger:
                  intent["operation_json"], intent["operation_sha256"], intent["adapter"],
                  intent["action"], intent["target"], now, now),
             )
+            self._append_execution_event(conn, intent["intent_id"], "intent_created",
+                                        grant_id=grant_id, task_id=intent["task_id"],
+                                        idempotency_key=intent["idempotency_key"],
+                                        operation_sha256=intent["operation_sha256"])
             conn.commit()
         except sqlite3.IntegrityError as exc:
             conn.rollback()
@@ -180,6 +245,8 @@ class SQLiteGrantLedger:
                            updated_at=? WHERE intent_id=? AND state='DISPATCHING'""",
                         (now.isoformat(), intent_id),
                     )
+                    self._append_execution_event(conn, intent_id, "dispatch_lease_expired",
+                                                worker_id=row["lease_owner"])
                     conn.commit()
                     raise GrantError("stale dispatch lease; intent moved to UNKNOWN for reconciliation")
             if row["state"] != "READY":
@@ -193,6 +260,8 @@ class SQLiteGrantLedger:
             claimed = conn.execute(
                 "SELECT * FROM execution_intents WHERE intent_id=?", (intent_id,)
             ).fetchone()
+            self._append_execution_event(conn, intent_id, "dispatch_claimed",
+                                        worker_id=worker_id, attempt=claimed["attempt_count"])
             conn.commit()
             return dict(claimed)
         except Exception:
@@ -225,6 +294,9 @@ class SQLiteGrantLedger:
             )
             if cur.rowcount != 1:
                 raise GrantError("execution intent state changed concurrently")
+            self._append_execution_event(conn, intent_id, "state_changed",
+                                        previous=expected_state, current=new_state,
+                                        evidence_sha256=evidence_sha256)
             conn.commit()
         except Exception:
             if conn.in_transaction:
