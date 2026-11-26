@@ -30,6 +30,22 @@ control = SQLiteControlPlane(
 
 Do not point this example at any production database. Use a new, isolated Business OS path only.
 
+## Signed one-use approval grant prototype
+
+`approval_grants.py` adds HMAC-SHA256 signed grants bound to the exact task
+payload hash, requester, adapter, action, target and idempotency key. Grants
+expire quickly (maximum 15 minutes by default) and are consumed atomically in
+a private, single-host SQLite ledger. Replays and scope/payload substitutions
+are rejected. Self-approval is prohibited.
+
+Issuance requires an injected `identity_verifier` callback. This module does
+not provide an identity provider, session validation, role management, key
+rotation, revocation service, network API or adapter. A caller-supplied
+callback is only a seam for future integration; do not wire it to an agent
+claim or a boolean request field. The signing key must be generated and
+managed outside Git using a secrets manager. The local ledger is not a
+distributed one-use grant service.
+
 ## Important limitations
 
 This is not a production control plane:
