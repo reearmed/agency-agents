@@ -6,7 +6,7 @@ The source of truth for original specialist personas remains the Agency Agents f
 
 | Business OS role | Source specialist | Responsibility |
 |---|---|---|
-| Chief Orchestrator | `agents/agents-orchestrator.md` | Intake, task decomposition, delegation, status and escalation |
+| Chief Orchestrator | Agency Agents runbook roster ID `agents-orchestrator`; Business OS implementation: `business-os/agents/00-chief-orchestrator.md` | Intake, task decomposition, delegation, status and escalation |
 | Portfolio & Delivery Manager | `project-management/project-manager-senior.md` | Portfolio capacity, milestones, blockers and weekly plan |
 | Opportunity Researcher | Research division market/trend researcher | Market sizing, competitor and customer evidence |
 | Reality & Evidence Reviewer | `testing/testing-reality-checker.md` | Independent verification; rejects unsupported claims |
