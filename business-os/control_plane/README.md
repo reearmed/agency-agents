@@ -32,7 +32,9 @@ Do not point this example at any production database. Use a new, isolated Busine
 
 ## API contract
 
-`../api/openapi.yaml` is the not-yet-deployed OpenAPI 3.1 contract. It defines only proposal, read, internal artifact, approval, budget and kill-switch routes; it has no public execution or adapter endpoint. Static safety tests run in CI. The placeholder server URL is not live.\n\n## Identity boundary
+`../api/openapi.yaml` is the not-yet-deployed OpenAPI 3.1 contract. It defines only proposal, read, internal artifact, approval, budget and kill-switch routes; it has no public execution or adapter endpoint. Static safety tests run in CI. The placeholder server URL is not live.
+
+## Identity boundary
 
 `identity_boundary.py` validates a bounded Bearer header using an injected cryptographic token-verifier callback, pins issuer/audience, checks token time claims, and returns a minimal immutable principal with scopes and roles. `human_approver_identity_verifier` can be passed as the approval authority's identity callback; it requires the verified principal subject to match and both the human-approver role and approval-decision scope.
 
