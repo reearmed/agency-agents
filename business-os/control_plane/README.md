@@ -42,6 +42,10 @@ Do not point this example at any production database. Use a new, isolated Busine
 
 `auth0_jwt_verifier.py` uses the pinned `PyJWT[crypto]==2.15.1` dependency in `requirements-auth.txt` to validate issuer-pinned Auth0 RS256/JWKS tokens using the RFC 9068 `at+jwt` profile. It derives the JWKS endpoint from a trusted HTTPS issuer and requires `iss`, `sub`, `aud`, `exp`, `iat`, `jti` and `client_id`. The tests use generated RSA keys and an injected offline JWKS key; they do not contact Auth0. The verifier is not a live tenant integration or an HTTP API.
 
+## Server-side route authorization
+
+`route_authorization.py` evaluates route scopes and roles from the server-owned OpenAPI operation after token authentication. It enforces every declared scope and role, rejects missing/unknown policy, and permits a public operation only when the OpenAPI operation explicitly sets `security: []` and declares no privileged extensions. The request body must never supply route policy. Tests walk every operation in the OpenAPI contract and verify positive and negative authorization outcomes.
+
 ## Identity boundary
 
 `identity_boundary.py` validates a bounded Bearer header using an injected cryptographic token-verifier callback, pins issuer/audience, checks token time claims, and returns a minimal immutable principal with scopes and roles filtered through a fixed Business OS allowlist. Unknown scopes/roles are discarded, and API contract tests verify that every declared route permission exists in that allowlist. `human_approver_identity_verifier` can be passed as the approval authority's identity callback; it requires the verified principal subject to match and both the human-approver role and approval-decision scope.
