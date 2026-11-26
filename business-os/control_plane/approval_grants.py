@@ -207,6 +207,209 @@ class SQLiteGrantLedger:
             (intent_id, event, details_json, previous, event_hash, created),
         )
 
+    def configure_budget(self, *, period: str, monthly_limit_minor: int,
+                        currency: str, per_task_limit_minor: int | None = None) -> None:
+        """Set a local hard cap once per period; changes require controlled offline migration."""
+        if not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", period or ""):
+            raise GrantError("budget period must be YYYY-MM")
+        if isinstance(monthly_limit_minor, bool) or not isinstance(monthly_limit_minor, int) or monthly_limit_minor < 0:
+            raise GrantError("monthly budget must be a non-negative integer in minor currency units")
+        if per_task_limit_minor is None:
+            per_task_limit_minor = monthly_limit_minor
+        if isinstance(per_task_limit_minor, bool) or not isinstance(per_task_limit_minor, int) or not 0 <= per_task_limit_minor <= monthly_limit_minor:
+            raise GrantError("per-task budget must be between zero and the monthly limit")
+        if not isinstance(currency, str) or not re.fullmatch(r"[A-Z]{3}", currency):
+            raise GrantError("currency must be a three-letter uppercase code")
+        now = datetime.now(timezone.utc).isoformat()
+        conn = self._connect()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            existing = conn.execute(
+                "SELECT * FROM execution_budget_limits WHERE period=?", (period,)
+            ).fetchone()
+            if existing:
+                if (existing["monthly_limit_minor"], existing["per_task_limit_minor"], existing["currency"]) == (
+                    monthly_limit_minor, per_task_limit_minor, currency
+                ):
+                    conn.commit()
+                    return
+                raise GrantError("budget limit already configured; changes require controlled offline migration")
+            conn.execute(
+                """INSERT INTO execution_budget_limits
+                   (period, monthly_limit_minor, per_task_limit_minor, currency, created_at)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (period, monthly_limit_minor, per_task_limit_minor, currency, now),
+            )
+            self._append_execution_event(
+                conn, "__system__", "budget_configured", period=period,
+                monthly_limit_minor=monthly_limit_minor,
+                per_task_limit_minor=per_task_limit_minor, currency=currency,
+            )
+            conn.commit()
+        except Exception:
+            if conn.in_transaction:
+                conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+    def _reserve_budget_in_transaction(self, conn: sqlite3.Connection, task_id: str,
+                                       budget: Mapping[str, Any], now: str) -> None:
+        required = {"reservation_id", "amount_minor", "currency", "period"}
+        if not isinstance(budget, Mapping) or set(budget) != required:
+            raise GrantError("budget reservation schema invalid")
+        amount = budget["amount_minor"]
+        if isinstance(amount, bool) or not isinstance(amount, int) or amount < 0:
+            raise GrantError("budget amount must be a non-negative integer in minor units")
+        if not isinstance(budget["reservation_id"], str) or not budget["reservation_id"].strip():
+            raise GrantError("budget reservation ID required")
+        if not re.fullmatch(r"[A-Z]{3}", str(budget["currency"])):
+            raise GrantError("budget currency must be a three-letter uppercase code")
+        if not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", str(budget["period"])):
+            raise GrantError("budget period must be YYYY-MM")
+        limit = conn.execute(
+            "SELECT * FROM execution_budget_limits WHERE period=?", (budget["period"],)
+        ).fetchone()
+        if not limit:
+            raise GrantError("budget limit is not configured; paid execution denied")
+        if limit["currency"] != budget["currency"]:
+            raise GrantError("budget currency mismatch")
+        if amount > limit["per_task_limit_minor"]:
+            raise GrantError("per-task budget hard limit exceeded")
+        usage = conn.execute(
+            """SELECT COALESCE(SUM(
+                   CASE WHEN state='RESERVED' THEN amount_minor
+                        WHEN state='SETTLED' THEN actual_minor ELSE 0 END
+               ), 0) AS total
+               FROM execution_budget_reservations WHERE period=?""",
+            (budget["period"],),
+        ).fetchone()["total"]
+        if usage + amount > limit["monthly_limit_minor"]:
+            raise GrantError("monthly budget hard limit exceeded")
+        conn.execute(
+            """INSERT INTO execution_budget_reservations
+               (reservation_id, task_id, amount_minor, currency, period, state,
+                actual_minor, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, 'RESERVED', NULL, ?, ?)""",
+            (budget["reservation_id"], task_id, amount, budget["currency"],
+             budget["period"], now, now),
+        )
+        self._append_execution_event(
+            conn, task_id, "budget_reserved", reservation_id=budget["reservation_id"],
+            amount_minor=amount, currency=budget["currency"], period=budget["period"],
+        )
+
+    def budget_usage(self, period: str) -> Mapping[str, Any]:
+        conn = self._connect()
+        try:
+            limit = conn.execute(
+                "SELECT * FROM execution_budget_limits WHERE period=?", (period,)
+            ).fetchone()
+            if not limit:
+                raise GrantError("budget limit is not configured")
+            rows = conn.execute(
+                """SELECT
+                   COALESCE(SUM(CASE WHEN state='RESERVED' THEN amount_minor ELSE 0 END),0) AS reserved,
+                   COALESCE(SUM(CASE WHEN state='SETTLED' THEN actual_minor ELSE 0 END),0) AS settled
+                   FROM execution_budget_reservations WHERE period=?""",
+                (period,),
+            ).fetchone()
+            total = rows["reserved"] + rows["settled"]
+            return {
+                "period": period,
+                "currency": limit["currency"],
+                "monthly_limit_minor": limit["monthly_limit_minor"],
+                "per_task_limit_minor": limit["per_task_limit_minor"],
+                "reserved_minor": rows["reserved"],
+                "settled_minor": rows["settled"],
+                "used_minor": total,
+                "remaining_minor": limit["monthly_limit_minor"] - total,
+            }
+        finally:
+            conn.close()
+
+    def get_budget_reservation(self, task_id: str) -> Mapping[str, Any] | None:
+        conn = self._connect()
+        try:
+            row = conn.execute(
+                "SELECT * FROM execution_budget_reservations WHERE task_id=?", (task_id,)
+            ).fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
+    def settle_budget(self, task_id: str, actual_minor: int) -> None:
+        if isinstance(actual_minor, bool) or not isinstance(actual_minor, int) or actual_minor < 0:
+            raise GrantError("actual budget must be a non-negative integer in minor units")
+        now = datetime.now(timezone.utc).isoformat()
+        conn = self._connect()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                "SELECT * FROM execution_budget_reservations WHERE task_id=?", (task_id,)
+            ).fetchone()
+            if not row or row["state"] != "RESERVED":
+                raise GrantError("no active budget reservation to settle")
+            usage = conn.execute(
+                """SELECT COALESCE(SUM(
+                       CASE WHEN state='RESERVED' THEN amount_minor
+                            WHEN state='SETTLED' THEN actual_minor ELSE 0 END
+                   ),0) AS total
+                   FROM execution_budget_reservations WHERE period=? AND task_id<>?""",
+                (row["period"], task_id),
+            ).fetchone()["total"]
+            limit = conn.execute(
+                "SELECT monthly_limit_minor FROM execution_budget_limits WHERE period=?",
+                (row["period"],),
+            ).fetchone()
+            if not limit or usage + actual_minor > limit["monthly_limit_minor"]:
+                raise GrantError("settled spend would exceed monthly hard limit")
+            conn.execute(
+                """UPDATE execution_budget_reservations SET state='SETTLED',
+                   actual_minor=?, updated_at=? WHERE task_id=? AND state='RESERVED'""",
+                (actual_minor, now, task_id),
+            )
+            self._append_execution_event(
+                conn, task_id, "budget_settled", actual_minor=actual_minor,
+                currency=row["currency"], period=row["period"],
+            )
+            conn.commit()
+        except Exception:
+            if conn.in_transaction:
+                conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+    def release_budget(self, task_id: str, *, verified_no_effect: bool) -> None:
+        if verified_no_effect is not True:
+            raise GrantError("budget release requires independently verified no-effect outcome")
+        now = datetime.now(timezone.utc).isoformat()
+        conn = self._connect()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                "SELECT * FROM execution_budget_reservations WHERE task_id=?", (task_id,)
+            ).fetchone()
+            if not row or row["state"] != "RESERVED":
+                raise GrantError("no active budget reservation to release")
+            conn.execute(
+                """UPDATE execution_budget_reservations SET state='RELEASED',
+                   updated_at=? WHERE task_id=? AND state='RESERVED'""",
+                (now, task_id),
+            )
+            self._append_execution_event(
+                conn, task_id, "budget_released", reservation_id=row["reservation_id"],
+                verified_no_effect=True,
+            )
+            conn.commit()
+        except Exception:
+            if conn.in_transaction:
+                conn.rollback()
+            raise
+        finally:
+            conn.close()
+
     def verify_execution_audit_chain(self) -> bool:
         conn = self._connect()
         try:
