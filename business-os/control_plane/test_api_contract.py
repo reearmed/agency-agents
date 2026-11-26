@@ -4,6 +4,8 @@ import unittest
 
 import yaml
 
+from identity_boundary import BUSINESS_OS_ROLES, BUSINESS_OS_SCOPES
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC_PATH = ROOT / "api" / "openapi.yaml"
@@ -35,6 +37,15 @@ class ApiContractTests(unittest.TestCase):
         self.assertIn("business-os:human-approver", approval["x-required-roles"])
         self.assertIn("business-os:budget-operator", budget["x-required-roles"])
         self.assertIn("business-os:operator", kill_switch["x-required-roles"])
+
+    def test_all_api_scope_and_role_extensions_are_allowlisted(self):
+        for path, methods in self.spec["paths"].items():
+            for method, operation in methods.items():
+                if not isinstance(operation, dict):
+                    continue
+                with self.subTest(path=path, method=method):
+                    self.assertTrue(set(operation.get("x-required-scopes", [])) <= BUSINESS_OS_SCOPES)
+                    self.assertTrue(set(operation.get("x-required-roles", [])) <= BUSINESS_OS_ROLES)
 
     def test_no_public_execution_or_adapter_routes_exist(self):
         paths = self.spec["paths"]
