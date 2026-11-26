@@ -104,6 +104,14 @@ class ApprovalGrantTests(unittest.TestCase):
         mode = stat.S_IMODE(Path(self.ledger.path).stat().st_mode)
         self.assertEqual(mode, 0o600)
 
+    def test_ledger_rejects_symlinked_parent_directory(self):
+        real_parent = Path(self.tmp.name) / "real-parent"
+        real_parent.mkdir(mode=0o700)
+        alias = Path(self.tmp.name) / "parent-alias"
+        alias.symlink_to(real_parent, target_is_directory=True)
+        with self.assertRaises(ValueError):
+            SQLiteGrantLedger(alias / "ledger.sqlite3")
+
     def test_future_issued_grant_rejected(self):
         token = self.issue(now=self.now + timedelta(seconds=1))
         with self.assertRaises(GrantError):
