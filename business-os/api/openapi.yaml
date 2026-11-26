@@ -1,0 +1,442 @@
+openapi: 3.1.0
+info:
+  title: Business OS Control Plane API
+  version: 0.1.0
+  description: >-
+    Contract only. No server is deployed. All operations require server-side
+    identity verification, authorization, tenant scoping and audit. External
+    execution adapters are intentionally not exposed through this public API.
+servers:
+  - url: https://business-os.example.invalid/v1
+    description: Placeholder only; replace after an approved isolated deployment.
+security:
+  - bearerAuth: []
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      summary: Return a minimal process health response
+      security: []
+      responses:
+        '200':
+          description: Process is responsive; this does not imply dependencies are healthy.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [status]
+                properties:
+                  status:
+                    const: ok
+  /tasks:
+    post:
+      operationId: submitTask
+      summary: Submit a task proposal for policy evaluation
+      x-required-scopes: [business-os:task:submit]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskProposal'
+      responses:
+        '202':
+          description: Proposal accepted for internal evaluation; no external action is authorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskReceipt'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /tasks/{task_id}:
+    get:
+      operationId: getTask
+      summary: Read a task summary owned by the authenticated tenant
+      x-required-scopes: [business-os:read]
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: Safe task summary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Task not found in the authenticated tenant.
+  /tasks/{task_id}/artifacts:
+    post:
+      operationId: stageArtifact
+      summary: Stage an internal artifact; this route cannot publish or send it.
+      x-required-scopes: [business-os:artifact:write]
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArtifactProposal'
+      responses:
+        '201':
+          description: Internal artifact staged.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArtifactReceipt'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /tasks/{task_id}/approval-requests:
+    post:
+      operationId: requestApproval
+      summary: Freeze an exact action payload and request human review
+      x-required-scopes: [business-os:approval:request]
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalProposal'
+      responses:
+        '202':
+          description: Approval request created; no execution has occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalRequestReceipt'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /approvals/{approval_id}/decision:
+    post:
+      operationId: decideApproval
+      summary: Approve or reject a frozen action as an authenticated human
+      x-required-scopes: [business-os:approval:decide]
+      x-required-roles: [business-os:human-approver]
+      parameters:
+        - name: approval_id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalDecision'
+      responses:
+        '200':
+          description: Decision recorded against the frozen request and authenticated principal.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalDecisionReceipt'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /budgets/{period}:
+    put:
+      operationId: configureBudget
+      summary: Configure a new immutable period budget before any paid work
+      x-required-scopes: [business-os:budget:configure]
+      x-required-roles: [business-os:budget-operator]
+      parameters:
+        - name: period
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^\\d{4}-(0[1-9]|1[0-2])$'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BudgetLimit'
+      responses:
+        '201':
+          description: Immutable period budget created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetReceipt'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /kill-switch:
+    post:
+      operationId: activateKillSwitch
+      summary: Activate the emergency stop; there is no API to clear it
+      x-required-scopes: [business-os:kill-switch:activate]
+      x-required-roles: [business-os:operator]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  minLength: 8
+                  maxLength: 1000
+      responses:
+        '202':
+          description: Emergency stop engaged; queued work must be blocked.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >-
+        Placeholder scheme. Production must use a cryptographic OIDC/JWT
+        verifier with pinned issuer, algorithm allowlist, JWKS rotation and
+        revocation checks. Claims in request bodies are never trusted.
+  parameters:
+    TaskId:
+      name: task_id
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 16
+        maxLength: 128
+  responses:
+    BadRequest:
+      description: Invalid schema or policy request.
+    Unauthorized:
+      description: Missing or invalid identity token.
+    Forbidden:
+      description: Authenticated principal lacks the required scope or role.
+    Conflict:
+      description: Idempotency, approval, state or immutable-budget conflict.
+  schemas:
+    TaskProposal:
+      type: object
+      additionalProperties: false
+      required: [objective, portfolio, risk_tier, task_type]
+      properties:
+        objective:
+          type: string
+          minLength: 8
+          maxLength: 4000
+        portfolio:
+          type: string
+          enum: [norevyo, automation_services, digital_products, shared]
+        risk_tier:
+          type: string
+          enum: [R0, R1, R2, R3, R4]
+        task_type:
+          type: string
+          enum: [research, analysis, internal_draft, internal_code, operational_read]
+        input:
+          type: object
+          additionalProperties: true
+    TaskReceipt:
+      type: object
+      additionalProperties: false
+      required: [task_id, state, created_at]
+      properties:
+        task_id:
+          type: string
+        state:
+          type: string
+          const: PROPOSED
+        created_at:
+          type: string
+          format: date-time
+    TaskSummary:
+      type: object
+      additionalProperties: false
+      required: [task_id, state, portfolio, risk_tier, created_at]
+      properties:
+        task_id:
+          type: string
+        state:
+          type: string
+          enum: [PROPOSED, BLOCKED, APPROVED, EXECUTING, UNKNOWN, SUCCEEDED, FAILED]
+        portfolio:
+          type: string
+        risk_tier:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        last_updated_at:
+          type: string
+          format: date-time
+    ArtifactProposal:
+      type: object
+      additionalProperties: false
+      required: [artifact_type, content_sha256, storage_ref]
+      properties:
+        artifact_type:
+          type: string
+          enum: [research, report, code_patch, email_draft, social_draft, proposal, dataset]
+        content_sha256:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+        storage_ref:
+          type: string
+          minLength: 1
+          maxLength: 512
+    ArtifactReceipt:
+      type: object
+      additionalProperties: false
+      required: [artifact_id, state]
+      properties:
+        artifact_id:
+          type: string
+        state:
+          type: string
+          const: STAGED
+    ApprovalProposal:
+      type: object
+      additionalProperties: false
+      required: [adapter, action, target, environment, payload, risk_tier, rollback_plan]
+      properties:
+        adapter:
+          type: string
+          minLength: 1
+          maxLength: 64
+        action:
+          type: string
+          minLength: 1
+          maxLength: 128
+        target:
+          type: string
+          minLength: 1
+          maxLength: 512
+        environment:
+          type: string
+          enum: [sandbox, staging, production]
+        payload:
+          type: object
+        amount_minor:
+          type: integer
+          minimum: 0
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+        risk_tier:
+          type: string
+          enum: [R3, R4]
+        rollback_plan:
+          type: string
+          minLength: 8
+          maxLength: 4000
+    ApprovalRequestReceipt:
+      type: object
+      additionalProperties: false
+      required: [approval_id, payload_sha256, state]
+      properties:
+        approval_id:
+          type: string
+        payload_sha256:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+        state:
+          type: string
+          const: PENDING
+    ApprovalDecision:
+      type: object
+      additionalProperties: false
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [approved, rejected]
+        comment:
+          type: string
+          maxLength: 2000
+    ApprovalDecisionReceipt:
+      type: object
+      additionalProperties: false
+      required: [approval_id, decision, approver_subject, decided_at]
+      properties:
+        approval_id:
+          type: string
+        decision:
+          type: string
+          enum: [approved, rejected]
+        approver_subject:
+          type: string
+        decided_at:
+          type: string
+          format: date-time
+    BudgetLimit:
+      type: object
+      additionalProperties: false
+      required: [monthly_limit_minor, per_task_limit_minor, currency]
+      properties:
+        monthly_limit_minor:
+          type: integer
+          minimum: 0
+        per_task_limit_minor:
+          type: integer
+          minimum: 0
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+    BudgetReceipt:
+      type: object
+      additionalProperties: false
+      required: [period, monthly_limit_minor, per_task_limit_minor, currency, immutable]
+      properties:
+        period:
+          type: string
+        monthly_limit_minor:
+          type: integer
+        per_task_limit_minor:
+          type: integer
+        currency:
+          type: string
+        immutable:
+          type: boolean
+          const: true
