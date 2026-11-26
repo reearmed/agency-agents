@@ -1,0 +1,37 @@
+# Tool gateway policy. Implement as deny-by-default middleware; this file is declarative intent only.
+default: deny
+roles:
+  chief-orchestrator:
+    allow: [task.read, task.create, agent.delegate, approval.read, artifact.read]
+    deny: [approval.grant, secrets.read, external.write, production.write]
+  research:
+    allow: [web.public_read, artifact.write]
+    deny: [authenticated_scrape, contact.enrich_sensitive, external.write]
+  analyst:
+    allow: [analytics.aggregate_read, finance.aggregate_read, artifact.write]
+    deny: [customer_record.read, production.write, financial_transaction]
+  engineer:
+    allow: [repository.read, sandbox.code_write, sandbox.test]
+    deny: [main.merge, production.deploy, production.database_write, secrets.read]
+  communications:
+    allow: [business_os.draft_write, artifact.read]
+    deny: [email.send, social.publish, sms.send, prospect.contact]
+  finance:
+    allow: [finance.aggregate_read, cost_event.write]
+    deny: [payment.create, payment.refund, subscription.create, budget.increase]
+approval_required:
+  - email.send
+  - social.publish
+  - prospect.contact
+  - ads.spend
+  - purchase.create
+  - contract.send
+  - customer_facing_release
+prohibited:
+  - production.database_write
+  - production.deploy
+  - payment.create
+  - payment.refund
+  - credential_export
+  - permission_self_escalation
+  - main.merge
