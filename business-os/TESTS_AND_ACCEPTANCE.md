@@ -49,7 +49,7 @@ Run a 7-day internal-only pilot using synthetic or explicitly approved low-risk 
 
 ## Current prototype evidence (26 November 2026)
 
-Latest feature-branch CI run: [45891752482](https://github.com/reearmed/agency-agents/actions/runs/45891752482), on commit `e750d7712c345da9ac22c41243197c751e6c7491`.
+Latest feature-branch CI run: [45891848185](https://github.com/reearmed/agency-agents/actions/runs/45891848185), on commit `81b6d76971e91d9f48ecc7e4c576f819e906f4ba`.
 
 Verified by hosted CI:
 - **176 Python unit tests passed** (`Ran 176 tests ... OK`), including real offline RSA signature verification through the Auth0 RS256 verifier and server-side OpenAPI route authorization.
