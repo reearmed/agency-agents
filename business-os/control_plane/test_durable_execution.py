@@ -48,6 +48,11 @@ class DurableExecutionTests(unittest.TestCase):
             idempotency_key="idem-1", requester_id="agent-1",
         )
 
+    def test_backup_rejects_parent_traversal_components(self):
+        unsafe = Path(self.temp.name) / ".." / "backup.sqlite3"
+        with self.assertRaises(ValueError):
+            self.ledger.backup_to(unsafe)
+
     def test_backup_rejects_symlinked_parent_directory(self):
         real_parent = Path(self.temp.name) / "real-backups"
         real_parent.mkdir(mode=0o700)
