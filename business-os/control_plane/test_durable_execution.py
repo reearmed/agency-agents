@@ -6,8 +6,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from approval_grants import ApprovalGrantAuthority, GrantError, SQLiteGrantLedger
-from durable_execution import DurableExecutionError, DurableMockExecutionGateway
-from execution_gateway import MockAdapter, MockOutcomeVerifier
+from durable_execution import DurableExecutionError, DurableMockExecutionGateway, SQLiteMockAdapter
+from execution_gateway import MockOutcomeVerifier
 
 
 class DurableExecutionTests(unittest.TestCase):
@@ -19,7 +19,7 @@ class DurableExecutionTests(unittest.TestCase):
             signing_key=b"k" * 32, ledger=self.ledger,
             identity_verifier=lambda actor, context: context == "authenticated-test-session",
         )
-        self.adapter = MockAdapter()
+        self.adapter = SQLiteMockAdapter(self.ledger)
         self.verifier = MockOutcomeVerifier()
         self.enabled = False
         self.gateway = DurableMockExecutionGateway(
@@ -73,7 +73,7 @@ class DurableExecutionTests(unittest.TestCase):
         self.assertEqual(self.adapter.call_count, 1)
 
     def test_timeout_after_destination_commit_reconciles_to_success(self):
-        self.gateway.adapter = MockAdapter(timeout_after_commit=True)
+        self.gateway.adapter = SQLiteMockAdapter(self.ledger, timeout_after_commit=True)
         result = self.submit()
         self.assertEqual(result["state"], "UNKNOWN")
         final = self.gateway.reconcile(result["intent_id"])
@@ -81,7 +81,7 @@ class DurableExecutionTests(unittest.TestCase):
         self.assertTrue(final["evidence_sha256"])
 
     def test_failure_before_destination_commit_reconciles_to_failed(self):
-        self.gateway.adapter = MockAdapter(fail_before_commit=True)
+        self.gateway.adapter = SQLiteMockAdapter(self.ledger, fail_before_commit=True)
         result = self.submit()
         self.assertEqual(result["state"], "UNKNOWN")
         final = self.gateway.reconcile(result["intent_id"])
