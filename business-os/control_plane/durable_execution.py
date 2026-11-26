@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from typing import Any, Mapping
 from approval_grants import ApprovalGrantAuthority, GrantError, SQLiteGrantLedger
-from execution_gateway import MockAdapter, MockOutcomeVerifier
+from execution_gateway import AdapterReceipt, MockAdapter, MockOutcomeVerifier
 from guardrails import canonical_json, payload_sha256
 
 
@@ -18,11 +18,48 @@ class DurableExecutionError(RuntimeError):
     """Fail-closed durable execution error."""
 
 
+class SQLiteMockAdapter:
+    """Synthetic destination whose receipts survive gateway/worker restarts."""
+
+    def __init__(self, ledger: SQLiteGrantLedger, *, timeout_after_commit: bool = False,
+                 fail_before_commit: bool = False):
+        if timeout_after_commit and fail_before_commit:
+            raise ValueError("choose one mock failure mode")
+        self.ledger = ledger
+        self.timeout_after_commit = timeout_after_commit
+        self.fail_before_commit = fail_before_commit
+        self.call_count = 0
+
+    def execute(self, *, idempotency_key: str, operation: Mapping[str, Any]) -> AdapterReceipt:
+        self.call_count += 1
+        if self.fail_before_commit:
+            raise RuntimeError("synthetic destination failure before commit")
+        receipt = self.ledger.record_mock_destination_acceptance(idempotency_key, operation)
+        result = AdapterReceipt(
+            idempotency_key=receipt["idempotency_key"],
+            operation_sha256=receipt["operation_sha256"],
+            result=receipt["result"],
+        )
+        if self.timeout_after_commit:
+            raise TimeoutError("synthetic timeout after durable destination acceptance")
+        return result
+
+    def lookup(self, idempotency_key: str) -> AdapterReceipt | None:
+        receipt = self.ledger.lookup_mock_destination_receipt(idempotency_key)
+        if receipt is None:
+            return None
+        return AdapterReceipt(
+            idempotency_key=receipt["idempotency_key"],
+            operation_sha256=receipt["operation_sha256"],
+            result=receipt["result"],
+        )
+
+
 class DurableMockExecutionGateway:
     def __init__(self, *, authority: ApprovalGrantAuthority, ledger: SQLiteGrantLedger,
-                 adapter: MockAdapter, verifier: MockOutcomeVerifier, kill_switch_check):
-        if type(adapter) is not MockAdapter or type(verifier) is not MockOutcomeVerifier:
-            raise TypeError("only the explicit mock adapter and mock verifier are supported")
+                 adapter: MockAdapter | SQLiteMockAdapter, verifier: MockOutcomeVerifier, kill_switch_check):
+        if type(adapter) not in (MockAdapter, SQLiteMockAdapter) or type(verifier) is not MockOutcomeVerifier:
+            raise TypeError("only the explicit in-memory or SQLite mock adapter and mock verifier are supported")
         if not callable(kill_switch_check):
             raise ValueError("kill_switch_check callback is required")
         if authority._ledger is not ledger:
