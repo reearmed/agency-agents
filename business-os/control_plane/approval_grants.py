@@ -97,6 +97,7 @@ class SQLiteGrantLedger:
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.path, timeout=10, isolation_level=None)
+        conn.execute("PRAGMA foreign_keys = ON")
         conn.execute("PRAGMA busy_timeout = 10000")
         conn.execute("PRAGMA synchronous = FULL")
         return conn
