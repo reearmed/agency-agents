@@ -14,6 +14,10 @@ def main() -> None:
         root = Path(temp)
         db_path = root / "ledger.sqlite3"
         ledger = SQLiteGrantLedger(db_path)
+        ledger.configure_budget(
+            period="2026-11", monthly_limit_minor=1000,
+            per_task_limit_minor=500, currency="USD",
+        )
         authority = ApprovalGrantAuthority(
             signing_key=b"synthetic-e2e-key-material-32bytes!!",
             ledger=ledger,
@@ -26,7 +30,16 @@ def main() -> None:
             verifier=MockOutcomeVerifier(),
             kill_switch_check=lambda: False,
         )
-        payload = {"operation": "synthetic-e2e", "amount": 0}
+        payload = {
+            "operation": "synthetic-e2e",
+            "amount": 0,
+            "_budget": {
+                "reservation_id": "synthetic-e2e-budget",
+                "amount_minor": 250,
+                "currency": "USD",
+                "period": "2026-11",
+            },
+        }
         token = authority.issue(
             task_id="synthetic-e2e-task",
             payload=payload,
@@ -69,6 +82,8 @@ def main() -> None:
         completed = restarted_gateway.reconcile(pending["intent_id"])
         assert completed["state"] == "SUCCEEDED"
         assert completed["evidence_sha256"]
+        restarted_ledger.settle_budget("synthetic-e2e-task", 225)
+        assert restarted_ledger.budget_usage("2026-11")["settled_minor"] == 225
         assert restarted_ledger.verify_execution_audit_chain()
         assert restarted_ledger.verify_execution_integrity()
 
@@ -78,6 +93,7 @@ def main() -> None:
         assert restored.get_intent(pending["intent_id"])["state"] == "SUCCEEDED"
         assert restored.verify_execution_audit_chain()
         assert restored.verify_execution_integrity()
+        assert restored.budget_usage("2026-11")["settled_minor"] == 225
 
         restored.activate_kill_switch()
         restored_authority = ApprovalGrantAuthority(
