@@ -54,7 +54,7 @@ Autonomy is guarded. Internal research, analysis, code, drafts and synthetic tes
 - Fork: `reearmed/agency-agents`.
 - Branch: `business-os/blueprint`.
 - Exact branch head: `8edbb297c2546e41418e55bd6a1084274d756525`.
-- Compare against `main`: Last full compare snapshot before the final handoff-formatting commits: **333 commits ahead, 2 behind, 71 changed paths**. All subsequent commits are documentation-only; recheck the live compare before any branch operation..
+- Compare against `main`: Last full compare snapshot before the final handoff-formatting commits: **333 commits ahead, 2 behind, 71 changed paths**. All subsequent commits are documentation-only; recheck the live compare before any branch operation.
 - The two commits behind are the previously disclosed handoff add/delete correction pair. Do not rebase, force-push, rewrite history or merge to resolve this without explicit approval.
 - The 71 changed paths are confined to `business-os/`, `scripts/bootstrap-business-os-openclaw.sh`, `scripts/test-bootstrap-business-os-openclaw.sh`, and `.github/workflows/business-os-safety-tests.yml`.
 - No open pull requests were returned in the latest check.
