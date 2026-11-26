@@ -99,6 +99,9 @@ class Auth0JWTVerifier:
             )
             if not isinstance(claims, dict):
                 raise Auth0JWTVerificationError("JWT claims must be an object")
+            client_id = claims.get("client_id")
+            if not isinstance(client_id, str) or not client_id.strip() or len(client_id) > 256:
+                raise Auth0JWTVerificationError("RFC 9068 client_id claim is invalid")
             return claims
         except Auth0JWTVerificationError:
             raise
