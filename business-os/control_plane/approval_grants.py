@@ -515,8 +515,11 @@ class SQLiteGrantLedger:
             "intent_id", "task_id", "idempotency_key", "operation_json",
             "operation_sha256", "adapter", "action", "target",
         }
-        if not isinstance(intent, Mapping) or set(intent) != required:
+        optional = {"budget_reservation"}
+        if not isinstance(intent, Mapping) or not (set(intent) == required or set(intent) == required | optional):
             raise GrantError("execution intent schema invalid")
+        budget = intent.get("budget_reservation")
+        budget_json = canonical_json(dict(budget)).decode("utf-8") if budget is not None else None
         now = datetime.now(timezone.utc).isoformat()
         conn = self._connect()
         try:
@@ -533,17 +536,20 @@ class SQLiteGrantLedger:
             conn.execute(
                 """INSERT INTO execution_intents
                    (intent_id, grant_id, task_id, idempotency_key, operation_json,
-                    operation_sha256, adapter, action, target, state, attempt_count,
-                    created_at, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?)""",
+                    operation_sha256, budget_reservation_json, adapter, action, target,
+                    state, attempt_count, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?)""",
                 (intent["intent_id"], grant_id, intent["task_id"], intent["idempotency_key"],
-                 intent["operation_json"], intent["operation_sha256"], intent["adapter"],
-                 intent["action"], intent["target"], now, now),
+                 intent["operation_json"], intent["operation_sha256"], budget_json,
+                 intent["adapter"], intent["action"], intent["target"], now, now),
             )
+            if budget is not None:
+                self._reserve_budget_in_transaction(conn, intent["task_id"], budget, now)
             self._append_execution_event(conn, intent["intent_id"], "intent_created",
                                         grant_id=grant_id, task_id=intent["task_id"],
                                         idempotency_key=intent["idempotency_key"],
                                         operation_sha256=intent["operation_sha256"],
+                                        budget_reservation=dict(budget) if budget is not None else None,
                                         adapter=intent["adapter"], action=intent["action"],
                                         target=intent["target"])
             conn.commit()
