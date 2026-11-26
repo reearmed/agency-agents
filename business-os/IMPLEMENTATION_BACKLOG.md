@@ -1,21 +1,30 @@
 # Implementation backlog
 
-Status: **planned work only**. Items below are not complete until code, tests and evidence exist in an isolated environment.
+Status: **local safety prototype added; production-grade control plane and runtime remain unimplemented**. A prototype or passing unit test does not complete an infrastructure-dependent backlog item.
 
 ## Release 0 — safe foundation (P0)
 
-| ID | Deliverable | Dependencies | Acceptance evidence |
+| ID | Deliverable | Current status | Remaining acceptance evidence |
 |---|---|---|---|
-| OS-001 | Pin OpenClaw version and runtime image by immutable digest | Hosting decision | Reproducible build and software inventory |
-| OS-002 | Provision isolated non-production host and private network | Operator selects provider/region and approves cost | Host inventory, firewall review, backup test |
-| OS-003 | Implement control-plane API and authenticated operator identity | OS-002 | AuthN/AuthZ tests; no agent can call privileged routes |
-| OS-004 | Implement task state machine with atomic transitions and leases | OS-003 | Concurrency and invalid-transition tests |
-| OS-005 | Implement approval service with canonical payload hash, expiry and single-use grants | OS-003 | Mutation, replay, expiry and recipient-swap tests |
-| OS-006 | Implement idempotent adapter contract and independent verifier | OS-003, OS-005 | Duplicate request and timeout reconciliation tests |
-| OS-007 | Implement budget reservation, reconciliation and hard-stop | OS-003 | Cap exhaustion and unavailable-budget tests |
-| OS-008 | Implement append-only audit, alerting and global/scoped kill switches | OS-003 | Restore, tamper-attempt and pause drills |
-| OS-009 | Provision separate Business OS database and durable queue | Operator selects organization/provider and approves cost | RLS/grant review, restore test, queue retry test |
-| OS-010 | Run isolated synthetic end-to-end test suite | OS-001 through OS-009 | All critical tests pass; evidence attached |
+| OS-001 | Pin OpenClaw version and runtime image by immutable digest | Not started | Reproducible build and software inventory |
+| OS-002 | Provision isolated non-production host and private network | Approval required | Host inventory, firewall review, backup test |
+| OS-003 | Implement control-plane API and authenticated operator identity | Not started | AuthN/AuthZ tests; no agent can call privileged routes |
+| OS-004 | Implement task state machine with atomic transitions and leases | Local in-memory state prototype only | Durable transactional state, leases, concurrency and invalid-transition tests |
+| OS-005 | Implement approval service with canonical payload hash, expiry and single-use grants | Local approval/hash prototype only | Authenticated human identity, durable single-use grant, expiry/replay/mutation tests |
+| OS-006 | Implement idempotent adapter contract and independent verifier | In-memory idempotency-key prototype only | Adapter gateway, destination deduplication and timeout reconciliation |
+| OS-007 | Implement budget reservation, reconciliation and hard-stop | In-memory cap prototype only | Durable reservation/reconciliation and service-unavailable tests |
+| OS-008 | Implement append-only audit, alerting and global/scoped kill switches | In-memory fail-closed audit and local kill-switch prototype only | Durable tamper-resistant audit, alerting, scoped switches and pause drills |
+| OS-009 | Provision separate Business OS database and durable queue | Approval required | RLS/grant review, restore test, queue retry test |
+| OS-010 | Run isolated synthetic end-to-end test suite | Not started | All critical tests pass; evidence attached |
+
+## Local prototype added
+
+- Strict task and approval JSON Schemas with valid and invalid fixtures.
+- Standard-library-only reference code for canonical payload SHA-256, approval scope/hash/expiry/replay checks, state transitions, idempotency claims, budget cap and fail-closed audit behavior.
+- Unit tests for key mutation, target swap, expiry, replay, human-approval gate, concurrency, kill switch, budget and audit failure.
+- Feature-branch CI workflow to validate schemas/fixtures and run the tests.
+
+These components are deliberately in-memory and have no external adapters. They are not production-ready. The CI result must be checked after the workflow runs; do not treat file creation as a passing test.
 
 ## Release 1 — internal research and NOREVYO improvement (P1)
 
@@ -57,7 +66,7 @@ Convert validated repeated work into templates, checklists or small tools. Build
 ## Decision gates
 
 - No new revenue stream gets active build capacity without portfolio-manager evidence and operator acceptance.
-- No external write before OS-005 and OS-006 are implemented and passing.
+- No external write before OS-005 and OS-006 are implemented and passing in a production-grade isolated control plane.
 - No scheduled 24/7 execution before OS-008 and OS-010 pass.
 - No customer data until privacy classification, lawful purpose, retention and access controls are reviewed.
 - No production NOREVYO integration without a separate explicit scope and per-action authorization.
