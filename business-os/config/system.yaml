@@ -61,8 +61,13 @@ permissions:
   main_branch_merge: prohibited
 
 budgets:
-  monthly_limit_usd: SET_BEFORE_ACTIVATION
-  per_task_limit_usd: SET_BEFORE_ACTIVATION
+  currency: USD
+  period_timezone: America/Toronto
+  monthly_limit_minor: SET_BEFORE_ACTIVATION
+  per_task_limit_minor: SET_BEFORE_ACTIVATION
+  reservation_mode: signed_payload_atomic_with_intent
+  reservation_required_for_paid_tasks: true
+  settlement_requires_reconciled_terminal_evidence: true
   alert_percentages: [50, 75, 90]
   hard_stop_at_limit: true
   automatic_budget_increase: false
