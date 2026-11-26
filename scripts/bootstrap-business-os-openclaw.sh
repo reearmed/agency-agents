@@ -2,6 +2,7 @@
 # Create guarded Business OS OpenClaw workspaces.
 # Dry-run is the default. Pass --apply to write. Existing files are never overwritten.
 set -euo pipefail
+umask 077
 
 if [[ -L "${BASH_SOURCE[0]}" ]]; then
   echo "Refusing symlinked bootstrap script: ${BASH_SOURCE[0]}" >&2
@@ -45,6 +46,7 @@ if [[ "$DEST_ROOT" != /* ]]; then
 fi
 python3 - "$DEST_ROOT" <<'PY'
 import pathlib
+import stat
 import sys
 
 root = pathlib.Path(sys.argv[1])
@@ -57,6 +59,21 @@ for part in root.parts[1:]:
         raise SystemExit(f"Refusing symlink in workspace path: {current}")
 if root.resolve(strict=False) in {pathlib.Path("/"), pathlib.Path.home().resolve()}:
     raise SystemExit(f"Refusing unsafe workspace root: {root}")
+if root.exists():
+    if not root.is_dir():
+        raise SystemExit(f"Workspace root exists but is not a directory: {root}")
+    if stat.S_IMODE(root.stat().st_mode) & 0o077:
+        raise SystemExit(f"Workspace root must be private (0700 or stricter): {root}")
+for name in ("orchestrator", "portfolio", "research", "norevyo", "services",
+             "content", "finance", "security", "reviewer"):
+    workspace = root / name
+    if workspace.is_symlink():
+        raise SystemExit(f"Refusing symlinked agent workspace: {workspace}")
+    if workspace.exists():
+        if not workspace.is_dir():
+            raise SystemExit(f"Agent workspace exists but is not a directory: {workspace}")
+        if pathlib.stat.S_IMODE(workspace.stat().st_mode) & 0o077:
+            raise SystemExit(f"Agent workspace must be private (0700 or stricter): {workspace}")
 PY
 
 # Refuse symlinked workspace roots and pre-existing files before any writes.
