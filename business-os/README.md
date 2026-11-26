@@ -35,9 +35,9 @@ One primary execution bet at a time. Research can cover all three; active build 
 
 ## Local safety prototype
 
-The `contracts/` directory contains strict JSON Schemas and valid/invalid fixtures for task and approval envelopes. The `control_plane/` package contains a standard-library-only, in-memory reference prototype for canonical JSON hashing, approval binding, state transitions, idempotency, budget caps and fail-closed audit checks. Its unit tests are run by the feature-branch-only GitHub Actions workflow at `.github/workflows/business-os-safety-tests.yml`.
+The `contracts/` directory contains strict JSON Schemas and valid/invalid fixtures for task and approval envelopes. The `control_plane/` package contains a standard-library-only, in-memory reference prototype for canonical JSON hashing, binding approvals to the original proposed payload, approval scope and expiry checks, state transitions, idempotency, budget caps, and fail-closed audit checks. Terminal success/failure requires a separately identified verifier and evidence SHA-256; ambiguous adapter outcomes can remain `unknown` until reconciled. Its unit tests are run by the feature-branch-only GitHub Actions workflow at `.github/workflows/business-os-safety-tests.yml`.
 
-**This is not a production control plane.** In-memory state is not durable or safe across processes; `human_approver` is a trust boundary that a future authenticated identity service must enforce; no adapter or external action is implemented. The prototype is not authorization to send, publish, spend, transact, or touch production.
+**This is not a production control plane.** In-memory state is not durable or safe across processes; `human_approver` and `verifier_id` are caller-supplied test parameters, not authenticated identities; evidence hashes are not independently fetched or checked; no adapter or external action is implemented. The prototype is not authorization to send, publish, spend, transact, or touch production.
 
 ## Operating principle
 
