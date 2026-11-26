@@ -46,6 +46,7 @@ class Auth0JWTVerifierTests(unittest.TestCase):
             "sub": "operator-1",
             "aud": AUDIENCE,
             "jti": "access-token-123",
+            "client_id": "business-os-agent-client",
             "iat": NOW - 5,
             "exp": NOW + 300,
             "scope": "business-os:read",
@@ -56,7 +57,7 @@ class Auth0JWTVerifierTests(unittest.TestCase):
             claims,
             self.private_key,
             algorithm="RS256",
-            headers={"kid": "test-key-1", "typ": "JWT"},
+            headers={"kid": "test-key-1", "typ": "at+jwt"},
         )
 
     def test_valid_rsa_signature_and_required_claims_are_verified(self):
@@ -71,7 +72,7 @@ class Auth0JWTVerifierTests(unittest.TestCase):
             {"iss": ISSUER, "sub": "attacker", "aud": AUDIENCE, "jti": "x", "iat": NOW, "exp": NOW + 60},
             other,
             algorithm="RS256",
-            headers={"kid": "test-key-1"},
+            headers={"kid": "test-key-1", "typ": "at+jwt"},
         )
         with self.assertRaises(Auth0JWTVerificationError):
             self.verifier(token)
@@ -130,8 +131,33 @@ class Auth0JWTVerifierTests(unittest.TestCase):
                 cache_jwk_set=True,
                 lifespan=300,
                 timeout=5.0,
+                cache_keys=True,
                 max_cached_keys=16,
             )
+
+
+    def test_verified_rfc9068_token_can_be_passed_to_identity_boundary(self):
+        from identity_boundary import IdentityBoundary, require_scope
+        boundary = IdentityBoundary(
+            token_verifier=self.verifier,
+            expected_issuer=ISSUER,
+            expected_audience=AUDIENCE,
+            role_claim="https://norevyo.com/claims/roles",
+        )
+        principal = boundary.authenticate("Bearer " + self.make_token())
+        require_scope(principal, "business-os:read")
+        self.assertEqual(principal.subject, "operator-1")
+        self.assertIn("business-os:operator", principal.roles)
+
+    def test_rejects_auth0_default_profile_without_rfc9068_token_type(self):
+        claims = {
+            "iss": ISSUER, "sub": "operator-1", "aud": AUDIENCE,
+            "jti": "id", "client_id": "client-1", "iat": NOW, "exp": NOW + 60,
+        }
+        token = jwt.encode(claims, self.private_key, algorithm="RS256",
+                           headers={"kid": "test-key-1", "typ": "JWT"})
+        with self.assertRaises(Auth0JWTVerificationError):
+            self.verifier(token)
 
     def test_rejects_invalid_verifier_policy_parameters(self):
         with self.assertRaises(ValueError):
