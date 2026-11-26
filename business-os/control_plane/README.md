@@ -55,7 +55,7 @@ scope are validated before the ledger atomically inserts both the consumed
 grant and immutable execution intent in one `BEGIN IMMEDIATE` transaction.
 The intent includes canonical operation JSON and SHA-256.
 
-The worker claims a READY intent with a bounded lease. If a process crashes
+The ledger also has a persistent fail-closed kill switch: it blocks grant+intent creation and new worker claims, and remains engaged if its audit write fails. The worker claims a READY intent with a bounded lease. If a process crashes
 before claiming it, another worker can recover READY work. Once claimed, a
 dispatch is never automatically repeated. A timeout or exception becomes
 UNKNOWN; an expired dispatch lease also becomes UNKNOWN. Both require
@@ -78,7 +78,7 @@ This is not a production control plane:
 - There is no real adapter, hosted queue, multi-host coordination, budget reconciliation/refund service, alerting, backup/restore automation or independently administered emergency control.
 - SQLite is a single-host prototype. WAL and transactional locking do not make it a distributed coordination service.
 - Audit triggers and the hash chain are tamper-evident, not tamper-proof against a privileged database operator who can rewrite the file or remove triggers.
-- The kill switch callback is supplied by the caller; this prototype does not provide a separately administered persistent global kill switch for the outbox.
+- The local persistent kill switch is stored in the same SQLite database and is not independently administered or distributed. A caller-supplied callback is also checked by the gateway; neither mechanism replaces a separately hosted emergency control.
 
 
 Keep all adapters disconnected until an authenticated control-plane service, independent verifier, durable audit/backup, production-grade authorization tests and incident controls exist.
