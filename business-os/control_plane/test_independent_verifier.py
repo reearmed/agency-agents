@@ -1,4 +1,5 @@
 import hashlib
+import json
 import unittest
 from datetime import datetime, timedelta, timezone
 
@@ -73,7 +74,7 @@ class IndependentEvidenceVerifierTests(unittest.TestCase):
         self.assertEqual(result.destination_record_id, "destination-123")
         self.assertEqual(result.verifier_subject, "verifier-1")
         self.assertEqual(result.evidence_sha256, hashlib.sha256(
-            __import__("json").dumps(self.evidence, sort_keys=True, separators=(",", ":")).encode()
+            json.dumps(self.evidence, sort_keys=True, separators=(",", ":")).encode()
         ).hexdigest())
         self.assertEqual(self.reader_calls, [("mock-adapter", "sandbox-object", "idem-1")])
 
@@ -127,7 +128,7 @@ class IndependentEvidenceVerifierTests(unittest.TestCase):
             self.verifier.verify(principal=self.principal, expected=self.expected)
 
     def test_rejects_missing_unknown_and_malformed_evidence(self):
-        for evidence in (None, {**self.evidence, "unexpected": True}, {**self.evidence, "outcome": "unknown"}):
+        for evidence in (None, {**self.evidence, "unexpected": True}, {**self.evidence, "outcome": "unknown"}, {**self.evidence, "outcome": []}):
             self.verifier = IndependentEvidenceVerifier(
                 evidence_reader=lambda adapter, target, key, evidence=evidence: evidence,
                 evidence_authenticator=lambda value: True,
