@@ -106,12 +106,14 @@ class DurableMockExecutionGateway:
         return json.loads(raw.decode("utf-8"))["grant_id"]
 
     def dispatch_ready(self, intent_id: str, *, worker_id: str) -> Mapping[str, Any]:
+        if self.kill_switch_check() is not False:
+            raise DurableExecutionError("kill switch active or unavailable; worker dispatch denied")
         try:
             intent = self.ledger.claim_intent(intent_id, worker_id)
         except GrantError as exc:
             raise DurableExecutionError(str(exc)) from exc
         operation = json.loads(intent["operation_json"])
-        if self.ledger.kill_switch_active():
+        if self.kill_switch_check() is not False or self.ledger.kill_switch_active():
             self.ledger.update_intent(
                 intent_id, expected_state="DISPATCHING", new_state="UNKNOWN",
                 error="persistent kill switch activated after claim; reconcile destination before any further action",
