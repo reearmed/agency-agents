@@ -65,7 +65,7 @@ class SQLiteGrantLedger:
             conn.execute("""CREATE TABLE IF NOT EXISTS execution_intents (
                 intent_id TEXT PRIMARY KEY,
                 grant_id TEXT NOT NULL UNIQUE REFERENCES consumed_grants(grant_id),
-                task_id TEXT NOT NULL,
+                task_id TEXT NOT NULL UNIQUE,
                 idempotency_key TEXT NOT NULL UNIQUE,
                 operation_json TEXT NOT NULL,
                 operation_sha256 TEXT NOT NULL,
