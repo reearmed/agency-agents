@@ -14,6 +14,7 @@ import hmac
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import sqlite3
 import stat
@@ -69,6 +70,7 @@ class SQLiteGrantLedger:
                 idempotency_key TEXT NOT NULL UNIQUE,
                 operation_json TEXT NOT NULL,
                 operation_sha256 TEXT NOT NULL,
+                budget_reservation_json TEXT,
                 adapter TEXT NOT NULL,
                 action TEXT NOT NULL,
                 target TEXT NOT NULL,
@@ -83,6 +85,39 @@ class SQLiteGrantLedger:
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )""")
+            conn.execute("""CREATE TABLE IF NOT EXISTS execution_budget_limits (
+                period TEXT PRIMARY KEY,
+                monthly_limit_minor INTEGER NOT NULL CHECK(monthly_limit_minor >= 0),
+                per_task_limit_minor INTEGER NOT NULL CHECK(per_task_limit_minor >= 0),
+                currency TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )""")
+            conn.execute("""CREATE TABLE IF NOT EXISTS execution_budget_reservations (
+                reservation_id TEXT PRIMARY KEY,
+                task_id TEXT NOT NULL UNIQUE REFERENCES execution_intents(task_id),
+                amount_minor INTEGER NOT NULL CHECK(amount_minor >= 0),
+                currency TEXT NOT NULL,
+                period TEXT NOT NULL REFERENCES execution_budget_limits(period),
+                state TEXT NOT NULL CHECK(state IN ('RESERVED', 'SETTLED', 'RELEASED')),
+                actual_minor INTEGER,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )""")
+            conn.executescript("""
+                CREATE TRIGGER IF NOT EXISTS budget_limits_no_update
+                BEFORE UPDATE ON execution_budget_limits
+                BEGIN SELECT RAISE(ABORT, 'budget limits require controlled offline change'); END;
+                CREATE TRIGGER IF NOT EXISTS budget_limits_no_delete
+                BEFORE DELETE ON execution_budget_limits
+                BEGIN SELECT RAISE(ABORT, 'budget limits cannot be deleted'); END;
+                CREATE TRIGGER IF NOT EXISTS budget_reservations_immutable_fields
+                BEFORE UPDATE OF reservation_id, task_id, amount_minor, currency, period, created_at
+                ON execution_budget_reservations
+                BEGIN SELECT RAISE(ABORT, 'budget reservation scope is immutable'); END;
+                CREATE TRIGGER IF NOT EXISTS budget_reservations_no_delete
+                BEFORE DELETE ON execution_budget_reservations
+                BEGIN SELECT RAISE(ABORT, 'budget reservations cannot be deleted'); END;
+            """)
             conn.execute("""CREATE TABLE IF NOT EXISTS mock_destination_receipts (
                 idempotency_key TEXT PRIMARY KEY,
                 operation_sha256 TEXT NOT NULL,
@@ -117,7 +152,7 @@ class SQLiteGrantLedger:
             conn.executescript("""
                 CREATE TRIGGER IF NOT EXISTS execution_intents_immutable_fields
                 BEFORE UPDATE OF intent_id, grant_id, task_id, idempotency_key, operation_json,
-                    operation_sha256, adapter, action, target, created_at
+                    operation_sha256, budget_reservation_json, adapter, action, target, created_at
                 ON execution_intents
                 BEGIN SELECT RAISE(ABORT, 'execution intent proposal fields are immutable'); END;
                 CREATE TRIGGER IF NOT EXISTS execution_intents_no_delete
