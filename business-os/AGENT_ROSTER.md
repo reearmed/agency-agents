@@ -2,6 +2,29 @@
 
 The source of truth for original specialist personas remains the Agency Agents files in this repository. These tailored role cards narrow their authority for Business OS. Install only this roster, not the entire catalogue.
 
+## Exact source files from this fork
+
+These are the upstream specialist definitions selected for the initial runtime install:
+
+| Agent ID | Repository source |
+|---|---|
+| `agents-orchestrator` | `specialized/agents-orchestrator.md` |
+| `project-manager-senior` | `project-management/project-manager-senior.md` |
+| `product-sprint-prioritizer` | `product/product-sprint-prioritizer.md` |
+| `product-trend-researcher` | `product/product-trend-researcher.md` |
+| `marketing-growth-hacker` | `marketing/marketing-growth-hacker.md` |
+| `marketing-content-creator` | `marketing/marketing-content-creator.md` |
+| `sales-outbound-strategist` | `sales/sales-outbound-strategist.md` |
+| `support-finance-tracker` | `support/support-finance-tracker.md` |
+| `support-analytics-reporter` | `support/support-analytics-reporter.md` |
+| `engineering-backend-architect` | `engineering/engineering-backend-architect.md` |
+| `engineering-devops-automator` | `engineering/engineering-devops-automator.md` |
+| `security-senior-secops` | `security/security-senior-secops.md` |
+| `testing-reality-checker` | `testing/testing-reality-checker.md` |
+| `support-legal-compliance-checker` | `support/support-legal-compliance-checker.md` |
+
+The nine tailored Business OS role cards in `business-os/agents/` narrow and adapt these responsibilities to the owner's guarded-autonomy policy. They are not replacements for the upstream source files.
+
 ## Command and planning
 
 | Business OS role | Source specialist | Responsibility |
