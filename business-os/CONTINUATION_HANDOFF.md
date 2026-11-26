@@ -3,7 +3,7 @@
 **Last updated:** 26 November 2026  
 **Repository:** https://github.com/reearmed/agency-agents  
 **Working branch:** `business-os/blueprint`  
-**Last tested code commit:** `09f0ba6df0e0cce64ceab76b2703f7e7adb53c3b` (the later commits are documentation-only; always inspect the live branch ref before proceeding)  
+**Last tested code commit:** `46c7747c8d769aff77587c40c6c91a6631650e3f` (subsequent commits refresh documentation; always inspect the live branch ref before proceeding)  
 **Base branch:** `main`  
 **Status:** guarded architecture, nine agent definitions, local mock-only control plane, durable SQLite outbox/budget prototype, strict identity boundary component, CI and synthetic tests. **Not deployed, not running, and not connected to external actions.**
 
@@ -60,8 +60,8 @@ Autonomy is guarded. Internal research, analysis, code, drafts and synthetic tes
 - The six commits behind comprise two pre-existing divergence commits plus four commits created while restoring the accidentally altered main tree. Do not rebase, force-push, rewrite history or merge to resolve this without explicit approval.
 - The 74 changed paths are confined to `business-os/`, `scripts/bootstrap-business-os-openclaw.sh`, `scripts/test-bootstrap-business-os-openclaw.sh`, and `.github/workflows/business-os-safety-tests.yml`.
 - No open pull requests were returned in the latest check.
-- Latest code-test CI: [run 45886961781](https://github.com/reearmed/agency-agents/actions/runs/45886961781), completed successfully on tested code commit `7678bb76830cebd1b204473debfaf7199c742d5b`; 156 Python tests passed, including the Auth0-style namespaced role-claim mapping test. Later commits refreshed documentation and provider research; verify the latest Actions run before continuing.
-- Latest CI evidence: six JSON Schema fixtures, **156 Python unit tests**, JSON/YAML/JSON5 config checks, OpenClaw policy assertions, bootstrap safety harness and budget-enabled synthetic durable E2E all passed.
+- Latest code-test CI: [run 45891543239](https://github.com/reearmed/agency-agents/actions/runs/45891543239), completed successfully on tested code commit `46c7747c8d769aff77587c40c6c91a6631650e3f`; 168 Python tests passed, including offline RSA signature verification and RFC 9068 token-profile tests. Subsequent commits refreshed documentation; verify the latest Actions run before continuing.
+- Latest CI evidence: six JSON Schema fixtures, **168 Python unit tests**, JSON/YAML/JSON5 config checks, OpenClaw policy assertions, bootstrap safety harness and budget-enabled synthetic durable E2E all passed.
 - No PR was created, no merge/rebase was performed, no production deployment occurred and no infrastructure was provisioned.
 
 ## Implemented repository deliverables
@@ -91,11 +91,12 @@ Autonomy is guarded. Internal research, analysis, code, drafts and synthetic tes
 - Private SQLite backup helper verifies SQLite integrity, foreign keys, audit chain and intent/budget/receipt integrity. It is manual local backup only, not off-host backup automation.
 
 ### Identity boundary and API contract (new)
-- `identity_boundary.py` adds bounded Bearer parsing, injected cryptographic token-verifier seam, exact issuer/audience checks, subject/token-ID requirements, expiry/not-before/issued-at/maximum-lifetime checks, scopes and roles.
+- `identity_boundary.py` adds bounded Bearer parsing, exact issuer/audience checks, subject/token-ID requirements, expiry/not-before/issued-at/maximum-lifetime checks, scopes and roles.
+- `auth0_jwt_verifier.py` is a concrete issuer-pinned Auth0 RS256/JWKS verifier using PyJWT[crypto] 2.15.1. It derives the JWKS URL from the trusted HTTPS issuer, pins RS256, bounds JWKS fetch/cache, requires RFC 9068 `at+jwt` plus `jti` and `client_id`, and rejects default Auth0 JWT-profile tokens. Dependency pin: `business-os/control_plane/requirements-auth.txt`.
 - Produces a minimal immutable principal without retaining the bearer token.
 - `human_approver_identity_verifier` is a callback for the existing approval authority. It requires the verified subject to match the approver ID and requires both `business-os:approval:decide` scope and `business-os:human-approver` role. The identity boundary filters scopes and roles through explicit Business OS allowlists; unknown claims do not grant privileges, supports a configurable namespaced role claim for OIDC providers such as Auth0, and API contract tests verify every route scope/role against those allowlists. Auth0 Public Cloud Canada Essentials is the preferred managed identity candidate (US$35/month, 500 MAU, Pro MFA and RBAC); its listed 1,000 M2M authentications require quota-unit and token-caching confirmation. No tenant is provisioned. A separate `IndependentEvidenceVerifier` contract requires an independently authenticated verifier identity, exact destination evidence, trusted source, authenticated evidence, bounded timestamps and payload/idempotency/target matching. It is tested with synthetic callbacks only and is not wired to a live destination.
 - `durable_execution.py` now bounds and strictly parses the untrusted grant ID routing hint before the approval authority independently verifies the HMAC, schema, expiry and exact scope.
-- An integration test now proves the verified human-principal callback works with `ApprovalGrantAuthority.issue`, and rejects a wrong subject or a principal lacking the human role/scope. A machine-readable OpenAPI 3.1 contract at `business-os/api/openapi.yaml` now defines task submission, safe reads, internal artifact staging, approval requests/decisions, immutable budget configuration and kill-switch activation. It deliberately exposes no execution or adapter route; all mutations require bearer security plus route scopes, and sensitive operations require roles. Static tests check these boundaries. This is a contract only, not a running API. These are local components and test seams, not a production IdP, cryptographic JWT verifier, authenticated API or HTTP service. Synthetic tests do not prove production identity.
+- An integration test now proves the verified human-principal callback works with `ApprovalGrantAuthority.issue`, and rejects a wrong subject or a principal lacking the human role/scope. A machine-readable OpenAPI 3.1 contract at `business-os/api/openapi.yaml` now defines task submission, safe reads, internal artifact staging, approval requests/decisions, immutable budget configuration and kill-switch activation. It deliberately exposes no execution or adapter route; all mutations require bearer security plus route scopes, and sensitive operations require roles. Static tests check these boundaries. This is a contract only, not a running API. These are local components and test seams, not a provisioned production IdP, live JWKS configuration, authenticated API or HTTP service. RSA tests verify real cryptographic signatures against generated offline keys, but do not prove live Auth0 key rotation, revocation, deployment or tenant configuration.
 
 ### Independent verifier contract (new)
 - `independent_verifier.py` requires a verified service principal with the internal verification scope and independent-verifier role, distinct from requester and executor.
@@ -107,7 +108,7 @@ Autonomy is guarded. Internal research, analysis, code, drafts and synthetic tes
 - Workflow: `.github/workflows/business-os-safety-tests.yml`.
 - Latest successful run: [45885579756](https://github.com/reearmed/agency-agents/actions/runs/45885579756).
 - Hosted CI passed **147 Python unit tests**, six JSON Schema fixtures, JSON/YAML/JSON5 parsing, OpenClaw config policy assertions, synthetic bootstrap safety checks and budget-enabled durable E2E.
-- The latest run included strict token-parser tests, identity-boundary tests, end-to-end identity-to-approval integration tests, Business OS scope/role allowlist tests, independent-verifier evidence tests and OpenAPI contract safety tests. Subsequent commits updated documentation only.
+- The latest run included strict token-parser tests, identity-boundary tests, end-to-end identity-to-approval integration tests, Business OS scope/role allowlist tests, independent-verifier evidence tests, OpenAPI contract safety tests and concrete offline RSA/JWKS verifier tests. Subsequent commits updated documentation only.
 - No local Mac test has been performed. The bootstrap helper has not been applied to the user's Mac.
 
 ## Repository safety incident and restoration
@@ -118,7 +119,9 @@ Two documentation-only writes were accidentally sent to `main` because the branc
 
 - Existing NOREVYO production Supabase is protected and must never be reused for Business OS.
 - A separate Business OS database and queue are required; neither has been created.
-- DigitalOcean Toronto VPS was previously considered at an indicative US$48/month for 4 vCPU / 8 GiB / 160 GiB; recheck current price, taxes, backup add-ons and provider terms before presenting an approval request. No host exists.
+- DigitalOcean Basic Toronto: official price currently lists US$48/month for 4 vCPU / 8 GiB / 160 GiB / 5,000 GiB transfer. No host exists; recheck tax, backup add-ons and checkout total before purchase. [Official pricing](https://www.digitalocean.com/pricing/droplets).
+- Auth0 Public Cloud Canada Essentials: official price US$35/month, up to 500 MAU, Pro MFA and RBAC; official plan comparison lists 1,000 M2M authentications. No tenant exists; cache service tokens and confirm quota semantics. [Official pricing](https://auth0.com/pricing), [Canada region announcement](https://auth0.com/changelog?version=v202631).
+- Indicative combined host + Auth0 baseline: US$83/month before tax, model/API usage, backup/monitoring and a separate database/queue. This is not purchase approval.
 - The user's local Qwen3-0.6B Q8_0 model is suitable only for lightweight classification/routing, not as the sole strategic reasoning model.
 - A hosted reasoning model or larger local model must be selected and capped before continuous operation.
 - Previously discussed NOREVYO budget of US$150/month is not a Business OS spending authorization. The user's later “flexible” budget preference also does not authorize purchases.
@@ -126,7 +129,7 @@ Two documentation-only writes were accidentally sent to `main` because the branc
 
 ## What remains before any real-world operation
 
-1. **Authenticated API:** implement the HTTP service, TLS boundary, server-side scopes, tenant/resource isolation, request limits, rate limits and secure session handling.
+1. **Authenticated API:** implement the HTTP service, TLS boundary, wire the tested RS256 verifier to a real Auth0 Canada tenant, server-side scopes, tenant/resource isolation, request limits, rate limits and secure session handling.
 2. **Production identity:** select IdP; implement real cryptographic OIDC/JWT verification with issuer pinning, algorithm allowlist, JWKS rotation, revocation and key-compromise procedures. Do not use a caller-provided claims object or boolean as proof.
 3. **Independent verification:** build separate verifier identities and authoritative target-state evidence retrieval. Never trust adapter success messages alone.
 4. **Multi-host coordination:** move beyond SQLite to a supported durable queue/database with atomic claims, lease recovery, idempotency and failure testing.
