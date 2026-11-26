@@ -74,6 +74,15 @@ class DurableMockExecutionGateway:
         except GrantError as exc:
             raise DurableExecutionError(str(exc)) from exc
         operation = json.loads(intent["operation_json"])
+        if self.ledger.kill_switch_active():
+            self.ledger.update_intent(
+                intent_id, expected_state="DISPATCHING", new_state="UNKNOWN",
+                error="persistent kill switch activated after claim; reconcile destination before any further action",
+            )
+            result = self.ledger.get_intent(intent_id)
+            if result is None:
+                raise DurableExecutionError("execution intent disappeared")
+            return result
         try:
             receipt = self.adapter.execute(
                 idempotency_key=intent["idempotency_key"], operation=operation
