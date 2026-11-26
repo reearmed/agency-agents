@@ -58,12 +58,12 @@ Any failed critical security test blocks activation of external integrations.
 
 As of 26 November 2026, the isolated feature-branch CI run
 [45876789287](https://github.com/reearmed/agency-agents/actions/runs/45876789287)
-passed six JSON Schema fixtures, 105 Python unit tests, JSON/YAML/JSON5
+passed six JSON Schema fixtures, 115 Python unit tests, JSON/YAML/JSON5
 configuration parsing, the synthetic bootstrap safety harness, and the
 budget-enabled synthetic control-plane end-to-end smoke test. The smoke test
 covers signed approval, atomic budget reservation and intent creation,
 mock destination acceptance, process-style restart, reconciliation,
-settlement, private backup/restore and kill-switch enforcement.
+settlement, private backup/restore, kill-switch enforcement and the human-operated CLI safety checks.
 
 These results validate local reference code only. They do not satisfy the
 production functional-acceptance checklist above. The authenticated API,
