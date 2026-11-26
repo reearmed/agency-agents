@@ -54,12 +54,15 @@ class SQLiteGrantLedger:
         if existed and (not path.is_file() or stat.S_IMODE(path.stat().st_mode) & 0o077):
             raise ValueError("existing ledger must be a private regular file")
         self.path = str(path)
-        with self._connect() as conn:
+        conn = self._connect()
+        try:
             conn.execute("""CREATE TABLE IF NOT EXISTS consumed_grants (
                 grant_id TEXT PRIMARY KEY,
                 grant_sha256 TEXT NOT NULL,
                 consumed_at TEXT NOT NULL
             )""")
+        finally:
+            conn.close()
         if not existed:
             os.chmod(self.path, 0o600)
 
@@ -179,7 +182,11 @@ class ApprovalGrantAuthority:
         if not isinstance(token, str) or token.count(".") != 1:
             raise GrantError("malformed approval grant")
         encoded, supplied_signature = token.split(".", 1)
-        expected_signature = self._sign(encoded.encode("ascii", errors="strict"))
+        try:
+            signed_bytes = encoded.encode("ascii", errors="strict")
+        except UnicodeEncodeError as exc:
+            raise GrantError("malformed approval grant") from exc
+        expected_signature = self._sign(signed_bytes)
         if not hmac.compare_digest(expected_signature, supplied_signature):
             raise GrantError("approval grant signature invalid")
         raw = _b64decode(encoded)
