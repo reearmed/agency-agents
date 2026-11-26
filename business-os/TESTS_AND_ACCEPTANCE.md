@@ -49,10 +49,10 @@ Run a 7-day internal-only pilot using synthetic or explicitly approved low-risk 
 
 ## Current prototype evidence (26 November 2026)
 
-Latest feature-branch CI run: [45886957661](https://github.com/reearmed/agency-agents/actions/runs/45886957661), on commit `7678bb76830cebd1b204473debfaf7199c742d5b`.
+Latest feature-branch CI run: [45886961781](https://github.com/reearmed/agency-agents/actions/runs/45886961781), on commit `7678bb76830cebd1b204473debfaf7199c742d5b`.
 
 Verified by hosted CI:
-- **155 Python unit tests passed** (`Ran 155 tests ... OK`).
+- **156 Python unit tests passed** (`Ran 156 tests ... OK`).
 - Six JSON Schema fixtures passed.
 - JSON, YAML and JSON5 configuration parsing passed.
 - OpenClaw example policy assertions passed, including explicit deny/allow lists, disabled cross-agent access, tree session visibility, disabled elevated/cron/restart, Docker network/root/capability controls and orchestrator-only delegation.
