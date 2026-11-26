@@ -217,8 +217,8 @@ class DurableExecutionTests(unittest.TestCase):
         try:
             conn.execute("DROP TRIGGER execution_intents_immutable_fields")
             conn.execute(
-                "UPDATE execution_intents SET operation_json='{"body":"tampered"}' WHERE intent_id=?",
-                (result["intent_id"],),
+                "UPDATE execution_intents SET operation_json=? WHERE intent_id=?",
+                ('{"body":"tampered"}', result["intent_id"]),
             )
             conn.commit()
         finally:
