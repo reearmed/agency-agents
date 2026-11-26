@@ -335,6 +335,8 @@ class DurableExecutionTests(unittest.TestCase):
             action="create", target="sandbox-object", idempotency_key="budget-idem-1",
             requester_id="agent-1",
         )
+        with self.assertRaises(GrantError):
+            self.ledger.settle_budget("budget-task-1", 650)
         self.assertEqual(self.gateway.reconcile(result["intent_id"])["state"], "SUCCEEDED")
         usage = self.ledger.budget_usage("2026-11")
         self.assertEqual(usage["reserved_minor"], 700)
