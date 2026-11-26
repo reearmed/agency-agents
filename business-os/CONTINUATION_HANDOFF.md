@@ -21,7 +21,7 @@ Read this file first, then:
 9. `business-os/control_plane/README.md`
 10. `business-os/TESTS_AND_ACCEPTANCE.md`
 11. `business-os/DEPLOYMENT_RUNBOOK.md`
-12. `business-os/runtime/openclaw/OPERATIONS.md`
+12. `business-os/api/openapi.yaml`\n13. `business-os/runtime/openclaw/OPERATIONS.md`
 
 Then inspect GitHub's current branch head, compare, pull requests and latest Actions before editing. Do not assume this handoff is newer than GitHub.
 
@@ -54,11 +54,11 @@ Autonomy is guarded. Internal research, analysis, code, drafts and synthetic tes
 - Fork: `reearmed/agency-agents`.
 - Branch: `business-os/blueprint`.
 - Exact branch head: `8edbb297c2546e41418e55bd6a1084274d756525`.
-- Compare against `main`: **329 commits ahead, 2 behind, 71 changed paths** at the time of this snapshot, before this handoff refresh adds one documentation-only commit.
+- Compare against `main`: **333 commits ahead, 2 behind, 71 changed paths** immediately before this handoff refresh; this refresh is documentation-only.
 - The two commits behind are the previously disclosed handoff add/delete correction pair. Do not rebase, force-push, rewrite history or merge to resolve this without explicit approval.
 - The 71 changed paths are confined to `business-os/`, `scripts/bootstrap-business-os-openclaw.sh`, `scripts/test-bootstrap-business-os-openclaw.sh`, and `.github/workflows/business-os-safety-tests.yml`.
 - No open pull requests were returned in the latest check.
-- Latest CI: [run 45885579756](https://github.com/reearmed/agency-agents/actions/runs/45885579756), completed successfully on the current head.
+- Latest code-test CI: [run 45885579756](https://github.com/reearmed/agency-agents/actions/runs/45885579756), completed successfully on tested code commit `8edbb297c2546e41418e55bd6a1084274d756525`. Later commits only refreshed documentation; verify the latest Actions run before continuing.
 - Latest CI evidence: six JSON Schema fixtures, **145 Python unit tests**, JSON/YAML/JSON5 config checks, OpenClaw policy assertions, bootstrap safety harness and budget-enabled synthetic durable E2E all passed.
 - No PR was created, no merge/rebase was performed, no production deployment occurred and no infrastructure was provisioned.
 
