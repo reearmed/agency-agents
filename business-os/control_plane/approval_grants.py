@@ -485,6 +485,45 @@ class SQLiteGrantLedger:
         finally:
             audit.close()
 
+    def backup_to(self, destination_path: str | Path) -> Path:
+        """Create a new private SQLite-consistent backup and verify its integrity."""
+        destination = Path(destination_path)
+        if not destination.is_absolute() or destination.is_symlink():
+            raise ValueError("backup path must be absolute and must not be a symlink")
+        if destination.resolve() == Path(self.path).resolve():
+            raise ValueError("backup destination must differ from the live ledger")
+        destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        if stat.S_IMODE(destination.parent.stat().st_mode) & 0o077:
+            raise ValueError("backup directory must be private (0700 or stricter)")
+        if destination.exists():
+            raise ValueError("backup destination already exists; refusing to overwrite")
+        source = self._connect()
+        target = sqlite3.connect(str(destination), timeout=10, isolation_level=None)
+        try:
+            source.backup(target)
+            integrity = target.execute("PRAGMA integrity_check").fetchone()
+            foreign_keys = target.execute("PRAGMA foreign_key_check").fetchall()
+            if not integrity or integrity[0] != "ok" or foreign_keys:
+                raise GrantError("backup integrity verification failed")
+            target.commit()
+        except Exception:
+            target.close()
+            source.close()
+            try:
+                destination.unlink(missing_ok=True)
+            except OSError:
+                pass
+            raise
+        else:
+            target.close()
+            source.close()
+        os.chmod(destination, 0o600)
+        restored = SQLiteGrantLedger(destination)
+        if not restored.verify_execution_audit_chain() or not restored.verify_execution_integrity():
+            destination.unlink(missing_ok=True)
+            raise GrantError("backup audit or intent integrity verification failed")
+        return destination
+
     def kill_switch_active(self) -> bool:
         conn = self._connect()
         try:
