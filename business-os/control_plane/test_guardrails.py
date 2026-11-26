@@ -74,9 +74,11 @@ class ApprovalTests(unittest.TestCase):
         self.approve(approval=approval)
         self.cp.transition(self.task, TaskState.BLOCKED)
         other = "task-000002"
-        self.cp.propose(other, self.payload)
+        other_digest = self.cp.propose(other, self.payload)
+        replay_for_other_task = approval_for(other, other_digest,
+                                             approval_id=approval.approval_id)
         with self.assertRaises(ApprovalError):
-            self.approve(approval=approval, task=other)
+            self.approve(approval=replay_for_other_task, task=other)
 
     def test_future_approval_timestamp_is_rejected(self):
         with self.assertRaises(ApprovalError):
@@ -102,6 +104,16 @@ class OperationalGuardTests(unittest.TestCase):
         cp.propose("task-000001", {})
         with self.assertRaises(StateError):
             cp.transition("task-000001", TaskState.SUCCEEDED)
+        digest = cp.propose("task-000002", {})
+        approval = approval_for("task-000002", digest)
+        cp.approve(task_id="task-000002", payload={}, approval=approval,
+                   expected_scope={"adapter": "email", "action": "send",
+                                   "target": "recipient@example.invalid"},
+                   human_approver=True,
+                   now=datetime(2026, 11, 26, 12, 5, tzinfo=timezone.utc))
+        cp.transition("task-000002", TaskState.EXECUTING)
+        with self.assertRaises(StateError):
+            cp.transition("task-000002", TaskState.SUCCEEDED)
 
     def test_unknown_adapter_outcome_can_be_reconciled_only_with_evidence(self):
         cp = InMemoryControlPlane(10)
