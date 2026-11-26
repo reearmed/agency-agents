@@ -147,6 +147,15 @@ class DurableExecutionTests(unittest.TestCase):
         self.assertEqual(self.ledger.list_ready_intents(), [])
         self.assertEqual(self.adapter.call_count, 0)
 
+    def test_persistent_kill_switch_blocks_grant_consumption_without_outbox(self):
+        self.ledger.activate_kill_switch()
+        with self.assertRaises(GrantError):
+            self.authority.verify_and_consume(
+                self.token, task_id="task-1", payload=self.payload, adapter="mock",
+                action="create", target="sandbox-object", idempotency_key="idem-1",
+                requester_id="agent-1",
+            )
+
     def test_persistent_kill_switch_blocks_new_approval_grants(self):
         self.ledger.activate_kill_switch()
         with self.assertRaises(GrantError):
