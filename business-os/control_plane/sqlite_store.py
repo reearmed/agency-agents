@@ -41,6 +41,8 @@ class SQLiteControlPlane:
     def __init__(self, db_path: str | Path, monthly_budget: float):
         if not math.isfinite(monthly_budget) or monthly_budget < 0:
             raise ValueError("monthly_budget must be finite and non-negative")
+        if str(db_path) == ":memory:" or not Path(db_path).is_absolute():
+            raise ValueError("db_path must be a persistent absolute filesystem path")
         self.db_path = str(db_path)
         self.monthly_budget = float(monthly_budget)
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
@@ -51,6 +53,7 @@ class SQLiteControlPlane:
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
         conn.execute("PRAGMA busy_timeout = 10000")
+        conn.execute("PRAGMA synchronous = FULL")
         return conn
 
     @contextmanager
@@ -317,24 +320,33 @@ class SQLiteControlPlane:
             self._append_audit(conn, "kill_switch_activated")
 
     def kill_switch_active(self) -> bool:
-        with self._connect() as conn:
+        conn = self._connect()
+        try:
             return self._kill_switch_active(conn)
+        finally:
+            conn.close()
 
     def task_state(self, task_id: str) -> TaskState:
-        with self._connect() as conn:
+        conn = self._connect()
+        try:
             row = conn.execute(
                 "SELECT state FROM tasks WHERE task_id = ?", (task_id,)
             ).fetchone()
             if not row:
                 raise StateError("unknown task")
             return TaskState(row["state"])
+        finally:
+            conn.close()
 
     def verify_audit_chain(self) -> bool:
-        with self._connect() as conn:
+        conn = self._connect()
+        try:
             rows = conn.execute(
                 """SELECT event, details_json, previous_hash, event_hash, created_at
                    FROM audit_events ORDER BY sequence"""
             ).fetchall()
+        finally:
+            conn.close()
         previous_hash = "0" * 64
         for row in rows:
             if row["previous_hash"] != previous_hash:
