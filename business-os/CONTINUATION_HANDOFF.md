@@ -55,12 +55,12 @@ Autonomy is guarded. Internal research, analysis, code, drafts and synthetic tes
 
 - Fork: `reearmed/agency-agents`.
 - Branch: `business-os/blueprint`.
-- Branch tip immediately before this handoff refresh: `4b3220b6909003eb772a7846cb68e3150dab7d14`; this refresh adds one documentation-only commit.
-- Compare against `main`: Last full compare snapshot before the final handoff-formatting commits: **347 commits ahead, 2 behind, 71 changed paths**. All subsequent commits are documentation-only; recheck the live compare before any branch operation.
+- Branch tip immediately before this handoff refresh: `1c6cd1f4de984c8847fc10a8119c260164974052`; this refresh adds one documentation-only commit.
+- Compare against `main`: latest verified snapshot immediately before this handoff refresh was **365 commits ahead, 6 behind, 74 changed paths**. This handoff refresh is documentation-only; recheck the live compare before any branch operation.
 - The six commits behind comprise two pre-existing divergence commits plus four commits created while restoring the accidentally altered main tree. Do not rebase, force-push, rewrite history or merge to resolve this without explicit approval.
 - The 74 changed paths are confined to `business-os/`, `scripts/bootstrap-business-os-openclaw.sh`, `scripts/test-bootstrap-business-os-openclaw.sh`, and `.github/workflows/business-os-safety-tests.yml`.
 - No open pull requests were returned in the latest check.
-- Latest code-test CI: [run 45885999525](https://github.com/reearmed/agency-agents/actions/runs/45885579756), completed successfully on tested code commit `803276e72a3ea78fdbce44ec741d9176fe8316b5`. Later commits only refreshed documentation; verify the latest Actions run before continuing.
+- Latest code-test CI: [run 45886256258](https://github.com/reearmed/agency-agents/actions/runs/45886256258), completed successfully on tested code commit `09f0ba6df0e0cce64ceab76b2703f7e7adb53c3b`; 155 Python tests passed. Later commits refreshed documentation and provider research; verify the latest Actions run before continuing.
 - Latest CI evidence: six JSON Schema fixtures, **155 Python unit tests**, JSON/YAML/JSON5 config checks, OpenClaw policy assertions, bootstrap safety harness and budget-enabled synthetic durable E2E all passed.
 - No PR was created, no merge/rebase was performed, no production deployment occurred and no infrastructure was provisioned.
 
