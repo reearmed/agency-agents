@@ -22,10 +22,10 @@ Status: **local safety prototype added; production-grade control plane and runti
 - Strict task and approval JSON Schemas with valid and invalid fixtures.
 - Standard-library-only reference code for canonical payload SHA-256, immutable proposed-task binding, approval scope/hash/expiry/replay checks, guarded state transitions, idempotency claims, budget cap and fail-closed audit behavior.
 - Terminal success/failure requires a verifier identity and evidence hash; adapter timeouts can remain `unknown` pending reconciliation. These are test-only parameters, not authenticated identity or evidence verification.
-- Unit tests for proposed-payload substitution, key mutation, target swap, expiry, replay, human-approval gate, terminal-state bypass, unknown-outcome reconciliation, concurrency, kill switch, budget and audit failure.
+- Unit tests for proposed-payload substitution, key mutation, target swap, expiry, replay, human-approval gate, terminal-state bypass, unknown-outcome reconciliation, concurrent budget reservations, idempotent retry, kill switch, budget and audit failure.
 - Feature-branch CI workflow to validate schemas/fixtures and run the tests.
 
-These components are deliberately in-memory and have no external adapters. They are not production-ready. An isolated local mirror of the fetched source passed 21/21 Python unit tests and all four schema/fixture cases. The GitHub Actions run result is still unconfirmed; do not infer a hosted CI pass from the local checks.
+These components are deliberately in-memory and have no external adapters. They are not production-ready. An isolated local mirror of the fetched source passed 23/23 Python unit tests and all four schema/fixture cases. The GitHub Actions run result is still unconfirmed; do not infer a hosted CI pass from the local checks.
 
 ## Release 1 — internal research and NOREVYO improvement (P1)
 
