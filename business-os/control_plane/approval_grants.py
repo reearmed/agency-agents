@@ -210,7 +210,7 @@ class SQLiteGrantLedger:
     def configure_budget(self, *, period: str, monthly_limit_minor: int,
                         currency: str, per_task_limit_minor: int | None = None) -> None:
         """Set a local hard cap once per period; changes require controlled offline migration."""
-        if not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", period or ""):
+        if not isinstance(period, str) or not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", period):
             raise GrantError("budget period must be YYYY-MM")
         if isinstance(monthly_limit_minor, bool) or not isinstance(monthly_limit_minor, int) or monthly_limit_minor < 0:
             raise GrantError("monthly budget must be a non-negative integer in minor currency units")
@@ -350,6 +350,8 @@ class SQLiteGrantLedger:
             ).fetchone()
             if not row or row["state"] != "RESERVED":
                 raise GrantError("no active budget reservation to settle")
+            if actual_minor > row["amount_minor"]:
+                raise GrantError("actual cost exceeds approved per-task reservation")
             usage = conn.execute(
                 """SELECT COALESCE(SUM(
                        CASE WHEN state='RESERVED' THEN amount_minor
