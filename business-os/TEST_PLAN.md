@@ -27,6 +27,7 @@
 | Monthly or per-task budget cap exceeded | Grant, intent and reservation all roll back; no destination call |
 | Budget settlement requested before reconciliation | Denied until terminal outcome and evidence exist |
 | Budget release requested without verified no-effect | Denied; release only follows reconciled FAILED outcome |
+| Budget cap or reservation rows are tampered with | Immutable triggers block ordinary edits; integrity verification detects privileged tampering |
 | Bootstrap dry-run/apply/re-run | No dry-run writes; private workspaces; no overwrite; unsafe paths rejected |
 | Production endpoint write attempted | Deny and alert |
 | Secret appears in log/artifact | Redact, quarantine artifact and rotate secret |
