@@ -136,6 +136,11 @@ class DurableExecutionTests(unittest.TestCase):
         self.assertEqual(self.ledger.list_ready_intents(), [])
         self.assertEqual(self.adapter.call_count, 0)
 
+    def test_persistent_kill_switch_blocks_new_approval_grants(self):
+        self.ledger.activate_kill_switch()
+        with self.assertRaises(GrantError):
+            self.issue(task_id="task-paused", key="idem-paused")
+
     def test_persistent_kill_switch_blocks_intent_creation(self):
         self.ledger.activate_kill_switch()
         self.assertTrue(self.ledger.kill_switch_active())
