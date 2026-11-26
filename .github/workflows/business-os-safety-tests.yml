@@ -68,7 +68,8 @@ jobs:
           print("PASS JSON, YAML and JSON5 configuration syntax")
           PY
           bash -n scripts/bootstrap-business-os-openclaw.sh
-          echo "PASS bootstrap shell syntax"
+          bash -n scripts/test-bootstrap-business-os-openclaw.sh
+          bash scripts/test-bootstrap-business-os-openclaw.sh
       - name: Run isolated guardrail tests
         working-directory: business-os/control_plane
         run: python -m unittest -v
