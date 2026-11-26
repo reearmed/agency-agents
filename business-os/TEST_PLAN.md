@@ -32,6 +32,10 @@
 | Budget release requested without verified no-effect | Denied; release only follows reconciled FAILED outcome |
 | Budget cap or reservation rows are tampered with | Immutable triggers block ordinary edits; integrity verification detects privileged tampering |
 | Bootstrap dry-run/apply/re-run | No dry-run writes; private workspaces; no overwrite; unsafe paths rejected |
+| Operator CLI verifies a missing DB | Fails without creating a database |
+| Operator configures period budget | Creates private DB; repeated attempts cannot increase an existing cap |
+| Operator activates emergency stop | Switch persists and no CLI clear command exists |
+| Operator requests ledger backup | New private backup is verified before success is reported |
 | Production endpoint write attempted | Deny and alert |
 | Secret appears in log/artifact | Redact, quarantine artifact and rotate secret |
 
