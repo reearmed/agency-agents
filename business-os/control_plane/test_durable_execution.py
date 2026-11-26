@@ -136,6 +136,44 @@ class DurableExecutionTests(unittest.TestCase):
         self.assertEqual(self.ledger.list_ready_intents(), [])
         self.assertEqual(self.adapter.call_count, 0)
 
+    def test_persistent_kill_switch_blocks_intent_creation(self):
+        self.ledger.activate_kill_switch()
+        self.assertTrue(self.ledger.kill_switch_active())
+        with self.assertRaises(DurableExecutionError):
+            self.submit()
+        self.assertEqual(self.ledger.list_ready_intents(), [])
+        self.assertTrue(self.ledger.verify_execution_audit_chain())
+        self.assertEqual(self.adapter.call_count, 0)
+
+    def test_persistent_kill_switch_blocks_worker_claim(self):
+        from guardrails import canonical_json, payload_sha256
+        grant_id = self.gateway._grant_id_from_token(self.token)
+        self.authority.verify_and_consume(
+            self.token, task_id="task-1", payload=self.payload, adapter="mock",
+            action="create", target="sandbox-object", idempotency_key="idem-1",
+            requester_id="agent-1",
+            execution_intent={
+                "intent_id": grant_id, "task_id": "task-1", "idempotency_key": "idem-1",
+                "operation_json": canonical_json(self.payload).decode(),
+                "operation_sha256": payload_sha256(self.payload), "adapter": "mock",
+                "action": "create", "target": "sandbox-object",
+            },
+        )
+        self.ledger.activate_kill_switch()
+        with self.assertRaises(GrantError):
+            self.ledger.claim_intent(grant_id, "worker")
+        self.assertEqual(self.adapter.call_count, 0)
+
+    def test_kill_switch_stays_active_if_its_audit_write_fails(self):
+        original = self.ledger._append_execution_event
+        def fail(*args, **kwargs):
+            raise RuntimeError("synthetic audit outage")
+        self.ledger._append_execution_event = fail
+        with self.assertRaises(RuntimeError):
+            self.ledger.activate_kill_switch()
+        self.ledger._append_execution_event = original
+        self.assertTrue(self.ledger.kill_switch_active())
+
     def test_payload_substitution_rejected_before_intent_creation(self):
         with self.assertRaises(DurableExecutionError):
             self.gateway.submit(
