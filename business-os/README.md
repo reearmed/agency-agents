@@ -1,10 +1,10 @@
 # Business OS — guarded, multi-revenue operating system
 
-Status: **blueprint / not deployed**  
+Status: **blueprint with local safety prototype; not deployed**  
 Repository: `reearmed/agency-agents`  
 Implementation branch: `business-os/blueprint`
 
-Business OS turns selected Agency Agents specialists into a governed operating system for researching, building, marketing and operating multiple revenue streams. It is an orchestration design, not a claim that this repository itself runs agents continuously.
+Business OS turns selected Agency Agents specialists into a governed operating system for researching, building, marketing and operating multiple revenue streams. The repository is not itself a continuously running agent service.
 
 ## Business portfolio
 
@@ -22,7 +22,6 @@ One primary execution bet at a time. Research can cover all three; active build 
 - [Control plane specification](CONTROL_PLANE_SPEC.md): enforcement boundary, identity, idempotency, budget and fail-closed behavior.
 - [Execution protocol](EXECUTION_PROTOCOL.md): exact-payload approval and one-time execution lifecycle.
 - [Security acceptance tests](TESTS_AND_ACCEPTANCE.md): critical bypass, replay, budget, kill-switch and pilot tests.
-- [Incident response](INCIDENT_RESPONSE.md): containment, investigation and recovery runbook.
 - [Implementation backlog](IMPLEMENTATION_BACKLOG.md): sequenced infrastructure, safety and revenue milestones.
 - [Revenue workflows](REVENUE_WORKFLOWS.md): repeatable operating cycles.
 - [Data and security](DATA_SECURITY.md): isolation, secrets, privacy and retention.
@@ -34,10 +33,16 @@ One primary execution bet at a time. Research can cover all three; active build 
 - [Configuration contract](config/system.yaml): intended runtime settings; placeholders only.
 - [Agent prompts](agents/): tailored role instructions for this operating system.
 
+## Local safety prototype
+
+The `contracts/` directory contains strict JSON Schemas and valid/invalid fixtures for task and approval envelopes. The `control_plane/` package contains a standard-library-only, in-memory reference prototype for canonical JSON hashing, approval binding, state transitions, idempotency, budget caps and fail-closed audit checks. Its unit tests are run by the feature-branch-only GitHub Actions workflow at `.github/workflows/business-os-safety-tests.yml`.
+
+**This is not a production control plane.** In-memory state is not durable or safe across processes; `human_approver` is a trust boundary that a future authenticated identity service must enforce; no adapter or external action is implemented. The prototype is not authorization to send, publish, spend, transact, or touch production.
+
 ## Operating principle
 
 **Research and prepare autonomously; commit, publish, spend, contact, transact or change production only under explicit authorization.** Every task has an owner, purpose, evidence, risk class, approval state and audit record.
 
 ## Not yet live
 
-No scheduler, agent runtime, database, credentials, integrations, deployment, control-plane service or background job is provisioned by these documents. The control-plane and execution documents are specifications, not implemented enforcement. Do not paste production secrets into this repository. Follow the runbook and test each integration with least privilege before enabling any live workflow.
+No scheduler, agent runtime, database, credentials, integrations, deployment, durable control-plane service or background job is provisioned. The reference database schema is not an applied migration. The OpenClaw config is an example and has not been runtime-validated. Follow the runbook and test each integration with least privilege before enabling any live workflow.
