@@ -145,6 +145,58 @@ class DurableExecutionTests(unittest.TestCase):
         self.assertTrue(self.ledger.verify_execution_audit_chain())
         self.assertEqual(self.adapter.call_count, 0)
 
+    def test_durable_destination_receipt_survives_gateway_restart(self):
+        from approval_grants import ApprovalGrantAuthority, SQLiteGrantLedger
+        from durable_execution import SQLiteMockAdapter
+        self.gateway.adapter = SQLiteMockAdapter(self.ledger, timeout_after_commit=True)
+        result = self.submit()
+        self.assertEqual(result["state"], "UNKNOWN")
+        restarted_ledger = SQLiteGrantLedger(self.db)
+        restarted_authority = ApprovalGrantAuthority(
+            signing_key=b"k" * 32, ledger=restarted_ledger,
+            identity_verifier=lambda actor, context: context == "authenticated-test-session",
+        )
+        restarted_adapter = SQLiteMockAdapter(restarted_ledger)
+        restarted_gateway = DurableMockExecutionGateway(
+            authority=restarted_authority, ledger=restarted_ledger,
+            adapter=restarted_adapter, verifier=MockOutcomeVerifier(),
+            kill_switch_check=lambda: False,
+        )
+        final = restarted_gateway.reconcile(result["intent_id"])
+        self.assertEqual(final["state"], "SUCCEEDED")
+        self.assertEqual(restarted_adapter.call_count, 0)
+
+    def test_persistent_destination_rejects_idempotency_key_payload_swap(self):
+        from durable_execution import SQLiteMockAdapter
+        adapter = SQLiteMockAdapter(self.ledger)
+        adapter.execute(idempotency_key="dest-key", operation={"amount": 1})
+        with self.assertRaises(GrantError):
+            adapter.execute(idempotency_key="dest-key", operation={"amount": 2})
+
+    def test_kill_switch_activated_after_claim_prevents_destination_call(self):
+        from guardrails import canonical_json, payload_sha256
+        grant_id = self.gateway._grant_id_from_token(self.token)
+        self.authority.verify_and_consume(
+            self.token, task_id="task-1", payload=self.payload, adapter="mock",
+            action="create", target="sandbox-object", idempotency_key="idem-1",
+            requester_id="agent-1",
+            execution_intent={
+                "intent_id": grant_id, "task_id": "task-1", "idempotency_key": "idem-1",
+                "operation_json": canonical_json(self.payload).decode(),
+                "operation_sha256": payload_sha256(self.payload), "adapter": "mock",
+                "action": "create", "target": "sandbox-object",
+            },
+        )
+        original_claim = self.ledger.claim_intent
+        def claim_then_stop(*args, **kwargs):
+            claimed = original_claim(*args, **kwargs)
+            self.ledger.activate_kill_switch()
+            return claimed
+        self.ledger.claim_intent = claim_then_stop
+        result = self.gateway.dispatch_ready(grant_id, worker_id="worker")
+        self.assertEqual(result["state"], "UNKNOWN")
+        self.assertEqual(self.adapter.call_count, 0)
+
     def test_persistent_kill_switch_blocks_worker_claim(self):
         from guardrails import canonical_json, payload_sha256
         grant_id = self.gateway._grant_id_from_token(self.token)
