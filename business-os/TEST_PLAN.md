@@ -22,7 +22,11 @@
 | Worker lease expires during dispatch | Move to UNKNOWN; never blindly re-dispatch |
 | Destination accepts then worker times out | Reconcile persistent destination receipt before terminal state |
 | Intent proposal or audit event is tampered with | Integrity verification fails |
-| Local SQLite backup is created and reopened | SQLite, foreign-key, audit-chain and intent integrity checks pass |
+| Local SQLite backup is created and reopened | SQLite, foreign-key, audit-chain, intent, budget and destination integrity checks pass |
+| Budget reservation is included in signed payload | Grant consumption, intent and reservation commit atomically |
+| Monthly or per-task budget cap exceeded | Grant, intent and reservation all roll back; no destination call |
+| Budget settlement requested before reconciliation | Denied until terminal outcome and evidence exist |
+| Budget release requested without verified no-effect | Denied; release only follows reconciled FAILED outcome |
 | Bootstrap dry-run/apply/re-run | No dry-run writes; private workspaces; no overwrite; unsafe paths rejected |
 | Production endpoint write attempted | Deny and alert |
 | Secret appears in log/artifact | Redact, quarantine artifact and rotate secret |
