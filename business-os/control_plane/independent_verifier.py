@@ -8,7 +8,7 @@ does not connect to any real service.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import hashlib
 import re
 from typing import Any, Callable, Mapping
@@ -121,7 +121,8 @@ class IndependentEvidenceVerifier:
             raise VerificationError("destination evidence does not match the approved execution")
         if evidence.get("source_id") != self._source_id:
             raise VerificationError("destination evidence source is not trusted")
-        if evidence.get("outcome") not in {"succeeded", "failed"}:
+        outcome = evidence.get("outcome")
+        if not isinstance(outcome, str) or outcome not in {"succeeded", "failed"}:
             raise VerificationError("destination outcome is inconclusive")
         if not isinstance(evidence.get("destination_record_id"), str) or not evidence["destination_record_id"].strip():
             raise VerificationError("destination record identifier is required")
@@ -136,9 +137,9 @@ class IndependentEvidenceVerifier:
         if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
             raise VerificationError("trusted verifier clock must return a timezone-aware datetime")
         now = now.astimezone(timezone.utc)
-        if observed_at < dispatched_at - __import__("datetime").timedelta(seconds=self._skew):
+        if observed_at < dispatched_at - timedelta(seconds=self._skew):
             raise VerificationError("destination evidence predates the approved dispatch")
-        if observed_at > now + __import__("datetime").timedelta(seconds=self._skew):
+        if observed_at > now + timedelta(seconds=self._skew):
             raise VerificationError("destination evidence timestamp is in the future")
         if (now - observed_at).total_seconds() > self._max_age:
             raise VerificationError("destination evidence is too old")
@@ -150,7 +151,7 @@ class IndependentEvidenceVerifier:
             raise VerificationError("destination evidence is not authenticated")
         evidence_digest = hashlib.sha256(canonical_json(dict(evidence))).hexdigest()
         return VerifiedOutcome(
-            outcome=evidence["outcome"],
+            outcome=outcome,
             evidence_sha256=evidence_digest,
             destination_record_id=evidence["destination_record_id"],
             source_id=self._source_id,
