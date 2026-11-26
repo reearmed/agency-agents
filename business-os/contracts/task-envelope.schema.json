@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://norevyo.com/schemas/business-os/task-envelope.schema.json",
+  "title": "Business OS task envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["task_id", "business_unit", "task_type", "risk_tier", "payload", "created_at", "expires_at"],
+  "properties": {
+    "task_id": {"type": "string", "minLength": 8, "maxLength": 128, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]+$"},
+    "business_unit": {"type": "string", "enum": ["norevyo", "automation_services", "digital_products", "internal"]},
+    "task_type": {"type": "string", "minLength": 1, "maxLength": 100},
+    "risk_tier": {"type": "string", "enum": ["R0", "R1", "R2", "R3", "R4"]},
+    "payload": {"type": "object"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "idempotency_key": {"type": "string", "minLength": 16, "maxLength": 200},
+    "budget": {"type": "object", "additionalProperties": false, "required": ["amount", "currency"], "properties": {"amount": {"type": "number", "minimum": 0}, "currency": {"type": "string", "pattern": "^[A-Z]{3}$"}}},
+    "evidence_refs": {"type": "array", "items": {"type": "string", "maxLength": 2048}, "maxItems": 100}
+  }
+}
