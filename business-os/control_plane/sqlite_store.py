@@ -26,6 +26,17 @@ from guardrails import (
 )
 
 
+def _reject_symlink_components(path: Path) -> None:
+    """Reject symlink traversal in every existing component of an absolute path."""
+    if not path.is_absolute() or ".." in path.parts:
+        raise ValueError("path must be absolute and must not contain '..'")
+    current = Path(path.anchor)
+    for component in path.parts[1:]:
+        current = current / component
+        if current.is_symlink():
+            raise ValueError("path must not traverse symlink components")
+
+
 _ALLOWED_TRANSITIONS = {
     TaskState.PROPOSED: {TaskState.BLOCKED},
     TaskState.APPROVED: {TaskState.EXECUTING, TaskState.BLOCKED},
@@ -46,10 +57,10 @@ class SQLiteControlPlane:
         database = Path(db_path)
         if str(db_path) == ":memory:" or not database.is_absolute():
             raise ValueError("db_path must be a persistent absolute filesystem path")
-        if database.is_symlink():
-            raise ValueError("database path must not be a symlink")
+        _reject_symlink_components(database)
         parent = database.parent
         parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        _reject_symlink_components(database)
         if stat.S_IMODE(parent.stat().st_mode) & 0o077:
             raise ValueError("database directory must be private (0700 or stricter)")
         existed = database.exists()
