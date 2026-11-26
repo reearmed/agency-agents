@@ -21,6 +21,7 @@
 | Process restarts after intent persistence but before claim | Recover READY intent exactly once |
 | Worker lease expires during dispatch | Move to UNKNOWN; never blindly re-dispatch |
 | Destination accepts then worker times out | Reconcile persistent destination receipt before terminal state |
+| Agent or caller invokes mock destination without a claimed approved intent | Destination denies request and records no receipt |
 | Intent proposal or audit event is tampered with | Integrity verification fails |
 | Local SQLite backup is created and reopened | SQLite, foreign-key, audit-chain, intent, budget and destination integrity checks pass |
 | Budget reservation is included in signed payload | Grant consumption, intent and reservation commit atomically |
