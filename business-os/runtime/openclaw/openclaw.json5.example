@@ -1,0 +1,114 @@
+// Guarded OpenClaw Gateway configuration for Business OS.
+// Review against the installed OpenClaw version before use.
+// This intentionally has no channel credentials, model credentials, cron jobs,
+// external messaging tools, shell execution, browser control or production tools.
+{
+  tools: {
+    profile: "minimal",
+    gatewayPolicy: {
+      allow: [
+        "read",
+        "write",
+        "web_search",
+        "web_fetch",
+        "sessions_spawn",
+        "sessions_yield",
+        "sessions_list",
+        "sessions_history",
+        "memory_search",
+        "memory_get"
+      ]
+    },
+    deny: [
+      "exec",
+      "process",
+      "message",
+      "browser",
+      "gateway",
+      "cron",
+      "automations",
+      "openclaw",
+      "nodes",
+      "computer",
+      "sessions_send",
+      "plugins"
+    ],
+    exec: { mode: "deny" },
+    elevated: { enabled: false }
+  },
+  cron: { enabled: false },
+  commands: { restart: false },
+  agents: {
+    defaults: {
+      sandbox: { mode: "all", scope: "agent" },
+      timeoutSeconds: 900
+    },
+    entries: [
+      {
+        id: "business-os-orchestrator",
+        name: "Business OS Orchestrator",
+        workspace: "~/.openclaw/business-os/orchestrator",
+        agentDir: "~/.openclaw/agents/business-os-orchestrator/agent",
+        tools: {
+          allow: ["read","write","web_search","web_fetch","sessions_spawn","sessions_yield","sessions_list","sessions_history","memory_search","memory_get"]
+        }
+      },
+      {
+        id: "business-os-portfolio",
+        name: "Portfolio Manager",
+        workspace: "~/.openclaw/business-os/portfolio",
+        agentDir: "~/.openclaw/agents/business-os-portfolio/agent",
+        tools: { allow: ["read","write","web_search","web_fetch","memory_search","memory_get"], deny: ["sessions_spawn","sessions_send","cron","gateway","exec","process","message"] }
+      },
+      {
+        id: "business-os-research",
+        name: "Opportunity Researcher",
+        workspace: "~/.openclaw/business-os/research",
+        agentDir: "~/.openclaw/agents/business-os-research/agent",
+        tools: { allow: ["read","write","web_search","web_fetch","memory_search","memory_get"], deny: ["sessions_spawn","sessions_send","cron","gateway","exec","process","message"] }
+      },
+      {
+        id: "business-os-norevyo",
+        name: "NOREVYO Growth Lead",
+        workspace: "~/.openclaw/business-os/norevyo",
+        agentDir: "~/.openclaw/agents/business-os-norevyo/agent",
+        tools: { allow: ["read","write","web_search","web_fetch","memory_search","memory_get"], deny: ["sessions_spawn","sessions_send","cron","gateway","exec","process","message"] }
+      },
+      {
+        id: "business-os-services",
+        name: "Automation Services Revenue Lead",
+        workspace: "~/.openclaw/business-os/services",
+        agentDir: "~/.openclaw/agents/business-os-services/agent",
+        tools: { allow: ["read","write","web_search","web_fetch","memory_search","memory_get"], deny: ["sessions_spawn","sessions_send","cron","gateway","exec","process","message"] }
+      },
+      {
+        id: "business-os-content",
+        name: "Content and Distribution Strategist",
+        workspace: "~/.openclaw/business-os/content",
+        agentDir: "~/.openclaw/agents/business-os-content/agent",
+        tools: { allow: ["read","write","web_search","web_fetch","memory_search","memory_get"], deny: ["sessions_spawn","sessions_send","cron","gateway","exec","process","message"] }
+      },
+      {
+        id: "business-os-finance",
+        name: "Finance and Unit Economics Analyst",
+        workspace: "~/.openclaw/business-os/finance",
+        agentDir: "~/.openclaw/agents/business-os-finance/agent",
+        tools: { allow: ["read","write","memory_search","memory_get"], deny: ["sessions_spawn","sessions_send","cron","gateway","exec","process","message"] }
+      },
+      {
+        id: "business-os-security",
+        name: "Security and Privacy Gatekeeper",
+        workspace: "~/.openclaw/business-os/security",
+        agentDir: "~/.openclaw/agents/business-os-security/agent",
+        tools: { allow: ["read","write","web_search","web_fetch","memory_search","memory_get"], deny: ["sessions_spawn","sessions_send","cron","gateway","exec","process","message"] }
+      },
+      {
+        id: "business-os-reviewer",
+        name: "Reality and Evidence Reviewer",
+        workspace: "~/.openclaw/business-os/reviewer",
+        agentDir: "~/.openclaw/agents/business-os-reviewer/agent",
+        tools: { allow: ["read","write","web_search","web_fetch","memory_search","memory_get"], deny: ["sessions_spawn","sessions_send","cron","gateway","exec","process","message"] }
+      }
+    ]
+  }
+}
