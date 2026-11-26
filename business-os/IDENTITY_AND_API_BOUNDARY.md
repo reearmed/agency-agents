@@ -20,12 +20,20 @@ The component deliberately does not parse or verify JWT signatures itself. The i
 
 ## Cryptographic Auth0 verifier component
 
+`control_plane/auth0_jwt_verifier.py` now provides a concrete RS256 verifier backed by **PyJWT[crypto] 2.15.1**, pinned in `requirements-auth.txt`. It accepts only an operator-configured HTTPS issuer origin and API audience, derives the JWKS URL from that issuer, pins RS256, requires a bounded `kid`, uses a five-second JWKS timeout, five-minute JWKS cache and bounded 16-key signing-key LRU cache, and requires the RFC 9068 `at+jwt` type plus `iss`, `sub`, `aud`, `exp`, `iat`, `jti` and `client_id` claims.
+
+PyJWT 2.15.1 includes security fixes for JWKS redirects and key handling (2.14.0) and JWT parser hardening (2.15.0). References: [PyJWT 2.15.1](https://pypi.org/project/PyJWT/2.15.1/), [security changelog](https://pyjwt.readthedocs.io/en/stable/changelog.html), [JWKS redirect advisory](https://github.com/advisories/GHSA-9v7f-9g4p-ffgj). Offline tests generate RSA keys and exercise real signature verification. A future release still needs a hash-locked full dependency set and dependency scan.
+
+The verifier is injectable into `IdentityBoundary`, but no Auth0 tenant, live JWKS fetch, API server, TLS endpoint, secret store, revocation integration or deployment exists. The production-authentication blocker remains open.
+
+## Cryptographic Auth0 verifier component
+
 `control_plane/auth0_jwt_verifier.py` now provides a concrete RS256 verifier backed by **PyJWT[crypto] 2.15.1**, pinned in `requirements-auth.txt`. It:
 - accepts only an operator-configured HTTPS issuer origin and API audience;
 - derives the JWKS URL from that exact issuer; no token or request can select a key URL;
 - pins the accepted JWT algorithm to RS256 and requires a bounded `kid`;
-- uses PyJWT's JWKS client with a 5-second fetch timeout, 5-minute JWKS cache and bounded 16-key signing-key cache;
-- requires and cryptographically validates issuer, audience, expiry, issued-at, subject and token ID;
+- uses PyJWT's JWKS client with a 5-second fetch timeout, 5-minute JWKS cache and bounded 16-key signing-key LRU cache;
+- requires RFC 9068 `at+jwt` type plus issuer, audience, expiry, issued-at, subject, client ID and token ID;
 - rejects unsigned tokens, algorithm confusion, wrong signatures, wrong issuer/audience and malformed or oversized tokens.
 
 PyJWT 2.15.1 is selected because its release includes the 2.14.0 security fixes for JWKS redirects and key handling, and the 2.15.0 parser-hardening fix. See [PyJWT 2.15.1 release metadata](https://pypi.org/project/PyJWT/2.15.1/), [PyJWT security changelog](https://pyjwt.readthedocs.io/en/stable/changelog.html) and [JWKS redirect advisory](https://github.com/advisories/GHSA-9v7f-9g4p-ffgj). The exact dependency must still be included in a future fully hash-locked deployment lockfile and scanned at release time.
@@ -49,7 +57,9 @@ The OpenAPI route scope/role extensions are tested against the same allowlist so
 
 ## Machine-readable API contract
 
-`business-os/api/openapi.yaml` defines the intended authenticated API surface. It includes task proposals, safe task reads, internal artifact staging, approval requests/decisions, immutable period-budget configuration and kill-switch activation. It intentionally exposes no execution or adapter route. The API contract has static CI checks for required bearer security, route scopes, sensitive-operation roles, strict request schemas and unique operation IDs. The server URL is a placeholder and no server is deployed.\n\n## Candidate identity provider (not provisioned)
+`business-os/api/openapi.yaml` defines the intended authenticated API surface. It includes task proposals, safe task reads, internal artifact staging, approval requests/decisions, immutable period-budget configuration and kill-switch activation. It intentionally exposes no execution or adapter route. The API contract has static CI checks for required bearer security, route scopes, sensitive-operation roles, strict request schemas and unique operation IDs. The server URL is a placeholder and no server is deployed.
+
+## Candidate identity provider (not provisioned)
 
 **Preferred managed candidate: Auth0 Public Cloud Canada, Essentials.** Auth0 documents a Canadian public-cloud region, selectable when creating a tenant; the resulting issuer uses the `.ca.auth0.com` domain. The current pricing page lists Essentials at **US$35/month**, up to 500 monthly active users, with Pro MFA and role-based access control. The pricing comparison lists 1,000 machine-to-machine authentications on Essentials, but the unit/quota semantics and expected service-token refresh rate must be confirmed before relying on it. Professional is listed at US$240/month and includes an M2M-token add-on; do not upgrade without a separate cost review.
 
@@ -77,7 +87,27 @@ exports.onExecutePostLogin = async (event, api) => {
 };
 ```
 
-Machine identities must use separate client-credentials applications and service-specific scopes/roles; they must never receive the human-approver role. Configure and test the exact machine-token claim mapping separately. No real token or Auth0 Action has been created.
+Machine identities must use separate client-credentials applications and service-specific scopes/roles; they must never receive the human-approver role. Use a separate Credentials Exchange Action for M2M tokens, not the Post-Login Action. It must map an exact approved client ID to a narrowly scoped service role, deny unknown client IDs and use the same namespaced claim. 
+
+For machine-to-machine grants, use a separate Credentials Exchange Action. Auth0 exposes the client and resource-server context to this trigger. Example policy pattern (placeholder client IDs must be replaced only after tenant provisioning):
+
+```javascript
+exports.onExecuteCredentialsExchange = async (event, api) => {
+  const serviceRoles = {
+    // "<approved-client-id>": ["business-os:independent-verifier"],
+  };
+  const roles = serviceRoles[event.client.client_id];
+  if (!roles || event.resource_server.identifier !== "https://business-os-api.example/") {
+    api.access.deny("access_denied", "Client is not approved for this API");
+    return;
+  }
+  api.accessToken.setCustomClaim("https://norevyo.com/claims/roles", roles);
+};
+```
+
+Review [Auth0 Credentials Exchange Action event](https://auth0.com/docs/customize/actions/explore-triggers/machine-to-machine-trigger/credentials-exchange-event-object) and [M2M Actions](https://auth0.com/docs/customize/actions/explore-triggers/machine-to-machine-trigger). This example is a template only; do not copy placeholder IDs into a live tenant.
+
+No real token, Action or tenant has been created.
 
 This is a research recommendation, not a selected provider or purchase. Before selection, confirm Canadian tenant availability for the exact plan, DPA/subprocessors, backup/log location, M2M quotas, token lifetime/rotation, revocation behavior and any restrictions on machine identities. No tenant has been created and no credentials are stored.
 
