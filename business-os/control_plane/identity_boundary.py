@@ -25,11 +25,13 @@ BUSINESS_OS_SCOPES = frozenset({
     "business-os:approval:decide",
     "business-os:budget:configure",
     "business-os:kill-switch:activate",
+    "business-os:verification:record",
 })
 BUSINESS_OS_ROLES = frozenset({
     "business-os:human-approver",
     "business-os:budget-operator",
     "business-os:operator",
+    "business-os:independent-verifier",
 })
 
 
