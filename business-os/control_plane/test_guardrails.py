@@ -85,6 +85,12 @@ class OperationalGuardTests(unittest.TestCase):
         with self.assertRaises(StateError):
             cp.transition("task-000001", TaskState.SUCCEEDED)
 
+    def test_direct_transition_cannot_bypass_approval(self):
+        cp = InMemoryControlPlane(10)
+        cp.propose("task-000001", {})
+        with self.assertRaises(StateError):
+            cp.transition("task-000001", TaskState.APPROVED)
+
     def test_kill_switch_blocks_budget_and_approval(self):
         cp = InMemoryControlPlane(10)
         cp.propose("task-000001", {})
