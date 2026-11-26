@@ -222,16 +222,19 @@ class ApprovalGrantAuthority:
         }
         if any(grant.get(key) != value for key, value in expected.items()):
             raise GrantError("approval grant does not match exact task, payload or scope")
-        current = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+        current_value = now or datetime.now(timezone.utc)
+        if current_value.tzinfo is None or current_value.utcoffset() is None:
+            raise GrantError("verification time must include a timezone")
+        current = current_value.astimezone(timezone.utc)
+        if not isinstance(grant["expires_at"], str) or not isinstance(grant["issued_at"], str):
+            raise GrantError("approval grant timestamps invalid")
         try:
             expires = datetime.fromisoformat(grant["expires_at"].replace("Z", "+00:00"))
             issued = datetime.fromisoformat(grant["issued_at"].replace("Z", "+00:00"))
-            if expires.tzinfo is None or issued.tzinfo is None or issued > current or current >= expires:
-                raise GrantError("approval grant is expired or not yet valid")
-        except (TypeError, ValueError) as exc:
-            if isinstance(exc, GrantError):
-                raise
+        except ValueError as exc:
             raise GrantError("approval grant timestamps invalid") from exc
+        if expires.tzinfo is None or issued.tzinfo is None or issued > current or current >= expires:
+            raise GrantError("approval grant is expired or not yet valid")
         grant_digest = hashlib.sha256(raw).hexdigest()
         self._ledger.consume(grant["grant_id"], grant_digest)
         return grant
