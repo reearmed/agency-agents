@@ -232,6 +232,16 @@ class SQLiteGrantLedger:
         finally:
             conn.close()
 
+    def list_ready_intents(self) -> list[Mapping[str, Any]]:
+        conn = self._connect()
+        try:
+            rows = conn.execute(
+                "SELECT * FROM execution_intents WHERE state='READY' ORDER BY created_at"
+            ).fetchall()
+            return [dict(row) for row in rows]
+        finally:
+            conn.close()
+
     def get_intent(self, intent_id: str) -> Mapping[str, Any] | None:
         conn = self._connect()
         try:
