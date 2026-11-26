@@ -11,6 +11,7 @@ import json
 from typing import Any, Mapping
 from approval_grants import ApprovalGrantAuthority, GrantError, SQLiteGrantLedger
 from execution_gateway import MockAdapter, MockOutcomeVerifier
+from guardrails import canonical_json, payload_sha256
 
 
 class DurableExecutionError(RuntimeError):
@@ -37,22 +38,28 @@ class DurableMockExecutionGateway:
                requester_id: str) -> Mapping[str, Any]:
         if self.kill_switch_check() is not False:
             raise DurableExecutionError("kill switch active or unavailable; execution denied")
+        grant_id = self._grant_id_from_token(token)
+        intent = {
+            "intent_id": grant_id,
+            "task_id": task_id,
+            "idempotency_key": idempotency_key,
+            "operation_json": canonical_json(dict(payload)).decode("utf-8"),
+            "operation_sha256": payload_sha256(payload),
+            "adapter": adapter_name,
+            "action": action,
+            "target": target,
+        }
         try:
             self.authority.verify_and_consume(
                 token, task_id=task_id, payload=payload, adapter=adapter_name,
                 action=action, target=target, idempotency_key=idempotency_key,
-                requester_id=requester_id,
-                execution_intent={"intent_id": "", "task_id": task_id,
-                    "idempotency_key": idempotency_key, "operation_json": "",
-                    "operation_sha256": "", "adapter": adapter_name,
-                    "action": action, "target": target},
+                requester_id=requester_id, execution_intent=intent,
             )
         except GrantError as exc:
             # The authority validates the intent against the signed grant and
             # commits grant consumption + durable intent in one transaction.
             raise DurableExecutionError("approval or durable intent rejected") from exc
-        grant = self._grant_id_from_token(token)
-        return self.dispatch_ready(grant, worker_id="submitter")
+        return self.dispatch_ready(grant_id, worker_id="submitter")
 
     @staticmethod
     def _grant_id_from_token(token: str) -> str:
