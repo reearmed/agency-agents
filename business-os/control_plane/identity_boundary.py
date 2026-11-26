@@ -17,6 +17,22 @@ class IdentityError(RuntimeError):
     """Authentication or authorization failed; callers must fail closed."""
 
 
+BUSINESS_OS_SCOPES = frozenset({
+    "business-os:read",
+    "business-os:task:submit",
+    "business-os:artifact:write",
+    "business-os:approval:request",
+    "business-os:approval:decide",
+    "business-os:budget:configure",
+    "business-os:kill-switch:activate",
+})
+BUSINESS_OS_ROLES = frozenset({
+    "business-os:human-approver",
+    "business-os:budget-operator",
+    "business-os:operator",
+})
+
+
 @dataclass(frozen=True)
 class VerifiedPrincipal:
     """Minimal verified identity; never contains the bearer token."""
@@ -131,14 +147,14 @@ class IdentityBoundary:
         raw_scopes = claims.get("scope", "")
         if not isinstance(raw_scopes, str):
             raise IdentityError("token scope claim must be a space-delimited string")
-        scopes = frozenset(raw_scopes.split())
+        scopes = frozenset(scope for scope in raw_scopes.split() if scope in BUSINESS_OS_SCOPES)
         raw_roles = claims.get("roles", [])
         if (
             not isinstance(raw_roles, (list, tuple))
             or any(not isinstance(role, str) or not role.strip() for role in raw_roles)
         ):
             raise IdentityError("token roles claim is invalid")
-        roles = frozenset(raw_roles)
+        roles = frozenset(role for role in raw_roles if role in BUSINESS_OS_ROLES)
         return VerifiedPrincipal(
             issuer=issuer,
             subject=subject,
@@ -155,8 +171,12 @@ def require_scope(principal: VerifiedPrincipal, scope: str) -> None:
     """Authorize a previously authenticated principal for one exact scope."""
     if not isinstance(principal, VerifiedPrincipal):
         raise IdentityError("verified principal required")
-    if not isinstance(scope, str) or not scope.strip() or scope not in principal.scopes:
-        raise IdentityError("required scope is missing")
+    if (
+        not isinstance(scope, str)
+        or scope not in BUSINESS_OS_SCOPES
+        or scope not in principal.scopes
+    ):
+        raise IdentityError("required or unsupported scope is missing")
 
 
 def human_approver_identity_verifier(actor_id: str, context: Any) -> bool:
