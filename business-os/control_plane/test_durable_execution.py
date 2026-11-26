@@ -181,6 +181,26 @@ class DurableExecutionTests(unittest.TestCase):
         with self.assertRaises(GrantError):
             adapter.execute(idempotency_key="dest-key", operation={"amount": 2})
 
+    def test_unavailable_external_kill_switch_blocks_dispatch_before_claim(self):
+        from guardrails import canonical_json, payload_sha256
+        grant_id = self.gateway._grant_id_from_token(self.token)
+        self.authority.verify_and_consume(
+            self.token, task_id="task-1", payload=self.payload, adapter="mock",
+            action="create", target="sandbox-object", idempotency_key="idem-1",
+            requester_id="agent-1",
+            execution_intent={
+                "intent_id": grant_id, "task_id": "task-1", "idempotency_key": "idem-1",
+                "operation_json": canonical_json(self.payload).decode(),
+                "operation_sha256": payload_sha256(self.payload), "adapter": "mock",
+                "action": "create", "target": "sandbox-object",
+            },
+        )
+        self.gateway.kill_switch_check = lambda: None
+        with self.assertRaises(DurableExecutionError):
+            self.gateway.dispatch_ready(grant_id, worker_id="worker")
+        self.assertEqual(self.ledger.get_intent(grant_id)["state"], "READY")
+        self.assertEqual(self.adapter.call_count, 0)
+
     def test_kill_switch_activated_after_claim_prevents_destination_call(self):
         from guardrails import canonical_json, payload_sha256
         grant_id = self.gateway._grant_id_from_token(self.token)
