@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 import tempfile
 from pathlib import Path
+import sqlite3
 import unittest
 
 from approval_grants import (
@@ -130,6 +131,16 @@ class ApprovalGrantTests(unittest.TestCase):
     def test_ttl_above_policy_rejected(self):
         with self.assertRaises(GrantError):
             self.issue(ttl_seconds=901)
+
+    def test_consumption_ledger_rejects_ordinary_delete(self):
+        token = self.issue()
+        self.consume(token)
+        conn = sqlite3.connect(self.ledger.path)
+        try:
+            with self.assertRaises(sqlite3.IntegrityError):
+                conn.execute("DELETE FROM consumed_grants")
+        finally:
+            conn.close()
 
     def test_concurrent_replay_only_one_consumer_wins(self):
         token = self.issue()
