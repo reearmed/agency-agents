@@ -48,7 +48,7 @@ The user wants useful autonomous work, not just an architecture document. Keep m
 
 ## What has been done
 
-A branch named `business-os/blueprint` was created from `main`. The latest comparison showed 52 changed paths, all within `business-os/`, `scripts/bootstrap-business-os-openclaw.sh`, and `.github/workflows/business-os-safety-tests.yml`. The branch is ahead of and two commits behind `main` because of the accidental handoff add/delete correction pair. The handoff file is absent from `main` again; no other `main` files were changed. Do not rewrite `main` history, merge, or rebase without explicit approval. Recheck the exact comparison before any branch operation.
+A branch named `business-os/blueprint` was created from `main`. The latest comparison (2026-11-26) showed 52 changed paths, all within `business-os/`, `scripts/bootstrap-business-os-openclaw.sh`, and `.github/workflows/business-os-safety-tests.yml`. The branch is 128 commits ahead of and two commits behind `main` because of the accidental handoff add/delete correction pair. The handoff file is absent from `main` again; no other `main` files were changed. Do not rewrite `main` history, merge, or rebase without explicit approval. Recheck the exact comparison before any branch operation.
 
 ### Repository deliverables
 - Business OS architecture, data/security and memory design.
@@ -129,6 +129,7 @@ Continue my existing Business OS implementation from the GitHub repository https
 - The latest comparison showed 52 changed paths, all within business-os/, scripts/bootstrap-business-os-openclaw.sh, and .github/workflows/business-os-safety-tests.yml. The branch remains diverged only because main contains the two accidental add/delete correction commits for the handoff file; that file is absent from main again. No merge, rebase, PR, or deployment has occurred.
 
 - Added `approval_grants.py` and `test_approval_grants.py`: HMAC-SHA256 exact-scope grants, a short configurable expiry (maximum 15 minutes), distinct requester/approver, injected fail-closed human identity verification, constant-time signature comparison, and transactional one-use consumption in a private local SQLite ledger with ordinary update/delete triggers. The module has no IdP, authenticated API, key-management/rotation, revocation, distributed ledger or adapter; privileged DB operators can still alter the ledger or remove its triggers. The new tests have not yet been run in a verified environment; do not claim they pass. The GitHub connector's commit-status endpoint returned an empty status list for the preceding test commit, and its workflow-run wrapper only returns pull-request-triggered runs, so push-run status remains unconfirmed.
+- Latest feature branch head: `b34d12535110ddedd76e9c2842303f3ba634f976`. Latest comparison: 128 ahead, 2 behind, 52 changed paths, all within the approved Business OS/workflow/bootstrap scope. Combined commit status returned an empty status list; the connector's workflow-run wrapper returned no runs (it only returns pull-request-triggered runs), so hosted CI is unconfirmed.
 - Latest work remains isolated to `business-os/blueprint`. No PR, merge, rebase, production change, deployment, infrastructure provisioning or paid service was performed.
 
 ## Final truth statement
