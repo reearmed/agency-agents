@@ -30,6 +30,12 @@ control = SQLiteControlPlane(
 
 Do not point this example at any production database. Use a new, isolated Business OS path only.
 
+## Identity boundary
+
+`identity_boundary.py` validates a bounded Bearer header using an injected cryptographic token-verifier callback, pins issuer/audience, checks token time claims, and returns a minimal immutable principal with scopes and roles. `human_approver_identity_verifier` can be passed as the approval authority's identity callback; it requires the verified principal subject to match and both the human-approver role and approval-decision scope.
+
+This is not an OIDC/JWT implementation or an HTTP API. The injected verifier must perform signature, algorithm, trusted JWKS/key-rotation and revocation checks. The current tests use synthetic verifier callbacks only. See [Identity and API boundary](../IDENTITY_AND_API_BOUNDARY.md) for the middleware contract and production gates.
+
 ## Signed one-use approval grant prototype
 
 `approval_grants.py` adds HMAC-SHA256 signed grants bound to the exact task
