@@ -26,6 +26,7 @@
     fs: { workspaceOnly: true },
     sessions: { visibility: "tree" },
     agentToAgent: { enabled: false },
+    subagents: { tools: { deny: ["exec", "process", "message", "browser", "gateway", "cron", "plugins"] } },
     elevated: { enabled: false }
   },
   cron: { enabled: false },
@@ -34,7 +35,11 @@
     ownership: "explicit",
     defaults: {
       systemAgent: { agentId: "business-os-orchestrator" },
-      sandbox: { mode: "all", scope: "agent", workspaceAccess: "rw" }
+      sandbox: {
+        mode: "all", scope: "agent", backend: "docker", workspaceAccess: "rw",
+        docker: { network: "none", readOnlyRoot: true, capDrop: ["ALL"], memory: "2g", cpus: 1 }
+      },
+      subagents: { maxConcurrent: 3, maxChildrenPerAgent: 3, maxSpawnDepth: 1, requireAgentId: true }
     },
     entries: {
       "business-os-orchestrator": {
