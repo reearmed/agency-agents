@@ -548,6 +548,31 @@ class SQLiteGrantLedger:
                 return False
         return True
 
+    def verify_mock_destination_integrity(self) -> bool:
+        """Tie immutable synthetic destination receipts to their approved intents."""
+        conn = self._connect()
+        try:
+            intents = conn.execute("SELECT * FROM execution_intents").fetchall()
+            receipts = conn.execute("SELECT * FROM mock_destination_receipts").fetchall()
+        finally:
+            conn.close()
+        by_key = {row["idempotency_key"]: row for row in intents}
+        receipt_map = {row["idempotency_key"]: row for row in receipts}
+        if len(receipt_map) != len(receipts):
+            return False
+        for receipt in receipts:
+            intent = by_key.get(receipt["idempotency_key"])
+            if (intent is None or receipt["operation_sha256"] != intent["operation_sha256"]
+                    or receipt["result"] != "mock-accepted"):
+                return False
+        for intent in intents:
+            has_receipt = intent["idempotency_key"] in receipt_map
+            if intent["state"] in {"READY", "FAILED"} and has_receipt:
+                return False
+            if intent["state"] in {"VERIFY_PENDING", "SUCCEEDED"} and not has_receipt:
+                return False
+        return True
+
     def verify_execution_integrity(self) -> bool:
         """Check current immutable intent rows against their original audit events."""
         conn = self._connect()
@@ -597,7 +622,7 @@ class SQLiteGrantLedger:
                 details.get(key) != value for key, value in expected.items()
             ):
                 return False
-        return self.verify_budget_integrity()
+        return self.verify_budget_integrity() and self.verify_mock_destination_integrity()
 
     def consume(self, grant_id: str, grant_sha256: str) -> None:
         """Atomically claim a grant ID. Duplicate or raced claims are rejected."""
