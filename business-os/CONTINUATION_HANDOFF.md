@@ -47,13 +47,7 @@ The user wants useful autonomous work, not just an architecture document. Keep m
 
 ## What has been done
 
-A branch named `business-os/blueprint` was created from `main`. The latest verified comparison before this handoff showed:
-- the branch remains diverged from main by two main-only correction commits; its last exact ahead/behind comparison must be rechecked before any branch operation;
-- 48 changed paths at the last comparison;
-- the two commits on main not in this branch are the accidental handoff add/delete correction pair. The file is absent from main again; do not rewrite history, merge, or rebase without explicit approval.
-- changed paths are within `business-os/`, `scripts/bootstrap-business-os-openclaw.sh`, and the dedicated test-only workflow `.github/workflows/business-os-safety-tests.yml`.
-
-The two commits on `main` not in this branch are an accidental add/delete correction pair for the handoff file. The file has been removed from `main`, restoring its prior file tree; do not rewrite main history. No other main files were changed by this work. Verify this comparison again before acting; it may have changed.
+A branch named `business-os/blueprint` was created from `main`. The latest comparison showed 48 changed paths, all within `business-os/`, `scripts/bootstrap-business-os-openclaw.sh`, and `.github/workflows/business-os-safety-tests.yml`. The branch is ahead of and two commits behind `main` because of the accidental handoff add/delete correction pair. The handoff file is absent from `main` again; no other `main` files were changed. Do not rewrite `main` history, merge, or rebase without explicit approval. Recheck the exact comparison before any branch operation.
 
 ### Repository deliverables
 - Business OS architecture, data/security and memory design.
@@ -131,7 +125,7 @@ Continue my existing Business OS implementation from the GitHub repository https
 - The control-plane prototype now stores the original task payload hash at proposal time and requires the approval to match it. Terminal success/failure cannot be reached through the generic transition method; the test API requires a verifier identifier and a 64-character SHA-256 evidence reference. An isolated local mirror of the fetched source passed 21/21 Python unit tests and all four JSON Schema fixture cases. The GitHub Actions result is still unconfirmed.
 - The OpenClaw example now explicitly limits sandbox tools, sets Docker network to none, uses a read-only container root, drops all Linux capabilities, keeps session visibility at tree, disables ordinary agent-to-agent access, and limits child depth to one. Current official docs support these configuration concepts. The exact example still needs validation with the selected pinned OpenClaw binary and an actual sandbox smoke test.
 - The GitHub Actions workflow is push-triggered on this branch. Its checkout and setup-python actions are pinned to verified immutable commit SHAs, checkout credential persistence is disabled, and jsonschema is version-pinned. The available connector did not expose a workflow run result; commit status was empty. Do not claim hosted CI passed.
-- The latest comparison before this handoff edit was 86 commits ahead / 2 behind, with 48 changed paths. All changed paths were within business-os/, scripts/bootstrap-business-os-openclaw.sh, and .github/workflows/business-os-safety-tests.yml. The two behind commits are the accidental add/delete correction pair on main; the file was removed from main again. No merge, rebase, PR, or deployment has occurred.
+- The latest comparison showed 48 changed paths, all within business-os/, scripts/bootstrap-business-os-openclaw.sh, and .github/workflows/business-os-safety-tests.yml. The branch remains diverged only because main contains the two accidental add/delete correction commits for the handoff file; that file is absent from main again. No merge, rebase, PR, or deployment has occurred.
 
 ## Final truth statement
 
