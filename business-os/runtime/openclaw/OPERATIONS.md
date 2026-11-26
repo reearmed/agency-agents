@@ -33,7 +33,7 @@ The script refuses to overwrite existing workspace files. It copies each tailore
 3. Merge the template into the existing config; do not replace unrelated user settings.
 4. Keep the Gateway local/loopback and access it only through SSH or Tailscale.
 5. Authenticate a model provider through the official onboarding flow; never commit API keys.
-6. Verify sandbox support and inspect the effective tool list for every agent.
+6. Verify sandbox support and inspect the effective tool list for every agent. The example uses an explicit sandbox tool allowlist as a second gate; a tool being allowed globally does not guarantee it is available inside a sandbox.
 
 ## Validate before running work
 
@@ -41,9 +41,11 @@ The script refuses to overwrite existing workspace files. It copies each tailore
 openclaw doctor
 openclaw agents list --tree
 openclaw gateway status
+openclaw sandbox explain --agent business-os-orchestrator
+openclaw sandbox explain --agent business-os-research
 ```
 
-If the installed CLI differs, consult `openclaw --help` and the version-matched docs rather than guessing command flags.
+If the installed CLI differs, consult `openclaw --help` and the version-matched docs rather than guessing command flags. Confirm the effective sandbox backend is Docker, scope is agent, workspace access is only `rw` for the private workspace, Docker network is `none`, root filesystem is read-only, and all Linux capabilities are dropped. Verify the effective sandbox tool allowlist and each agent's effective tool policy; fail closed if the sandbox is unavailable or any unexpected tool is exposed.
 
 ## First synthetic task
 
