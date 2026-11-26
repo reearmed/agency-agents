@@ -201,22 +201,25 @@ class DurableExecutionTests(unittest.TestCase):
         self.assertIsNone(self.ledger.lookup_mock_destination_receipt("blocked-key"))
 
     def test_durable_destination_idempotent_replay_returns_original_receipt(self):
-        from durable_execution import SQLiteMockAdapter
-        adapter = SQLiteMockAdapter(self.ledger)
-        first = adapter.execute(idempotency_key="stable-key", operation={"amount": 1})
-        second = adapter.execute(idempotency_key="stable-key", operation={"amount": 1})
+        self.submit()
+        first = self.adapter.execute(idempotency_key="idem-1", operation=self.payload)
+        second = self.adapter.execute(idempotency_key="idem-1", operation=self.payload)
         self.assertEqual(first, second)
         self.assertEqual(
-            self.ledger.lookup_mock_destination_receipt("stable-key")["operation_sha256"],
+            self.ledger.lookup_mock_destination_receipt("idem-1")["operation_sha256"],
             first.operation_sha256,
         )
+        self.assertTrue(self.ledger.verify_execution_integrity())
 
     def test_persistent_destination_rejects_idempotency_key_payload_swap(self):
-        from durable_execution import SQLiteMockAdapter
-        adapter = SQLiteMockAdapter(self.ledger)
-        adapter.execute(idempotency_key="dest-key", operation={"amount": 1})
+        self.submit()
         with self.assertRaises(GrantError):
-            adapter.execute(idempotency_key="dest-key", operation={"amount": 2})
+            self.adapter.execute(idempotency_key="idem-1", operation={"amount": 2})
+
+    def test_persistent_destination_rejects_unapproved_operation(self):
+        with self.assertRaises(GrantError):
+            self.adapter.execute(idempotency_key="unapproved-key", operation={"amount": 1})
+        self.assertIsNone(self.ledger.lookup_mock_destination_receipt("unapproved-key"))
 
     def test_unavailable_external_kill_switch_blocks_dispatch_before_claim(self):
         from guardrails import canonical_json, payload_sha256
