@@ -198,5 +198,6 @@ class InMemoryControlPlane:
 
     def activate_kill_switch(self) -> None:
         with self._lock:
-            self._record("kill_switch_activated")
+            # Safety state must engage even when the audit sink is unavailable.
             self.kill_switch = True
+            self._record("kill_switch_activated")
