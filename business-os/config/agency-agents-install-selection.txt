@@ -1,0 +1,17 @@
+# Selective upstream Agency Agents install list.
+# Use only after selecting the runtime and confirming its install target.
+# Generate/install with the upstream scripts in dry-run mode first.
+agents-orchestrator
+project-manager-senior
+product-sprint-prioritizer
+product-trend-researcher
+marketing-growth-hacker
+marketing-content-creator
+sales-outbound-strategist
+support-finance-tracker
+support-analytics-reporter
+engineering-backend-architect
+engineering-devops-automator
+testing-reality-checker
+security-senior-secops
+support-legal-compliance-checker
