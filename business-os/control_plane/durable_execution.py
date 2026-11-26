@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from typing import Any, Mapping
 from approval_grants import ApprovalGrantAuthority, GrantError, SQLiteGrantLedger
-from execution_gateway import AdapterReceipt, MockAdapter, MockOutcomeVerifier
+from execution_gateway import AdapterReceipt, MockOutcomeVerifier
 from guardrails import canonical_json, payload_sha256
 
 
@@ -57,9 +57,9 @@ class SQLiteMockAdapter:
 
 class DurableMockExecutionGateway:
     def __init__(self, *, authority: ApprovalGrantAuthority, ledger: SQLiteGrantLedger,
-                 adapter: MockAdapter | SQLiteMockAdapter, verifier: MockOutcomeVerifier, kill_switch_check):
-        if type(adapter) not in (MockAdapter, SQLiteMockAdapter) or type(verifier) is not MockOutcomeVerifier:
-            raise TypeError("only the explicit in-memory or SQLite mock adapter and mock verifier are supported")
+                 adapter: SQLiteMockAdapter, verifier: MockOutcomeVerifier, kill_switch_check):
+        if type(adapter) is not SQLiteMockAdapter or type(verifier) is not MockOutcomeVerifier:
+            raise TypeError("the durable gateway requires the explicit SQLite mock destination and mock verifier")
         if not callable(kill_switch_check):
             raise ValueError("kill_switch_check callback is required")
         if authority._ledger is not ledger:
