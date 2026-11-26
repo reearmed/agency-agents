@@ -137,10 +137,17 @@ class OperationalGuardTests(unittest.TestCase):
 
     def test_kill_switch_blocks_budget_and_approval(self):
         cp = InMemoryControlPlane(10)
-        cp.propose("task-000001", {})
+        digest = cp.propose("task-000001", {})
         cp.activate_kill_switch()
         with self.assertRaises(BudgetError):
             cp.reserve_budget("task-000001", 1)
+        with self.assertRaises(ApprovalError):
+            cp.approve(task_id="task-000001", payload={},
+                       approval=approval_for("task-000001", digest),
+                       expected_scope={"adapter": "email", "action": "send",
+                                       "target": "recipient@example.invalid"},
+                       human_approver=True,
+                       now=datetime(2026, 11, 26, 12, 5, tzinfo=timezone.utc))
 
     def test_budget_cap_is_hard(self):
         cp = InMemoryControlPlane(5)
