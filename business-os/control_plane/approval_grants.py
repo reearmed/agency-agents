@@ -647,6 +647,24 @@ class SQLiteGrantLedger:
                 return False
         return self.verify_budget_integrity() and self.verify_mock_destination_integrity()
 
+    def verify_all(self) -> Mapping[str, Any]:
+        """Return a complete local integrity report without changing ledger state."""
+        conn = self._connect()
+        try:
+            sqlite_result = conn.execute("PRAGMA integrity_check").fetchone()
+            foreign_key_issues = conn.execute("PRAGMA foreign_key_check").fetchall()
+        finally:
+            conn.close()
+        checks = {
+            "sqlite_integrity": bool(sqlite_result and sqlite_result[0] == "ok"),
+            "foreign_keys": not foreign_key_issues,
+            "execution_audit_chain": self.verify_execution_audit_chain(),
+            "execution_intents": self.verify_execution_integrity(),
+            "budget_ledger": self.verify_budget_integrity(),
+            "mock_destination": self.verify_mock_destination_integrity(),
+        }
+        return {"ok": all(checks.values()), "checks": checks}
+
     def consume(self, grant_id: str, grant_sha256: str) -> None:
         """Atomically claim a grant ID. Duplicate or raced claims are rejected."""
         conn = self._connect()
