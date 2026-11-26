@@ -100,6 +100,33 @@ model/API invoices, provide alerts, support multiple hosts or authenticate the
 operator who configures limits or confirms no-effect outcomes. No paid action
 or real adapter is enabled.
 
+## Operator CLI
+
+`cli.py` provides local human-operated commands for configuring a period
+budget, inspecting usage, verifying the ledger, creating a verified backup
+and activating the persistent emergency stop. It has no kill-switch clear
+command and no execution, network, payment, publishing or messaging command.
+Read operations require an existing absolute database path. Budget
+configuration creates a new ledger only when explicitly invoked and refuses
+to change an existing period limit.
+
+Example command shapes (replace placeholders; do not use an unapproved cap):
+
+```bash
+python cli.py configure-budget --db /absolute/private/path/business-os.sqlite3 \
+  --period YYYY-MM --monthly-limit-minor LIMIT --per-task-limit-minor LIMIT \
+  --currency USD
+python cli.py budget-usage --db /absolute/private/path/business-os.sqlite3 --period YYYY-MM
+python cli.py verify --db /absolute/private/path/business-os.sqlite3
+python cli.py backup --db /absolute/private/path/business-os.sqlite3 \
+  --destination /absolute/private/backup/ledger.sqlite3
+python cli.py activate-kill-switch --db /absolute/private/path/business-os.sqlite3
+```
+
+The CLI is not installed on the user's Mac and has not been run against any
+user database. Use only a new isolated Business OS database; never point it
+at NOREVYO production.
+
 ## Private local backup
 
 `SQLiteGrantLedger.backup_to(path)` uses SQLite's online backup API to create
