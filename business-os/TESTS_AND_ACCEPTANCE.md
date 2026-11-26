@@ -49,19 +49,19 @@ Run a 7-day internal-only pilot using synthetic or explicitly approved low-risk 
 
 ## Current prototype evidence (26 November 2026)
 
-Latest feature-branch CI run: [45886961781](https://github.com/reearmed/agency-agents/actions/runs/45886961781), on commit `7678bb76830cebd1b204473debfaf7199c742d5b`.
+Latest feature-branch CI run: [45891543239](https://github.com/reearmed/agency-agents/actions/runs/45891543239), on tested code commit `46c7747c8d769aff77587c40c6c91a6631650e3f`.
 
 Verified by hosted CI:
-- **156 Python unit tests (before the concrete RS256 verifier tests) passed** (`Ran 156 tests ... OK`).
+- **168 Python unit tests passed** (`Ran 168 tests ... OK`), including real offline RSA signature verification through the Auth0 RS256 verifier.
 - Six JSON Schema fixtures passed.
 - JSON, YAML and JSON5 configuration parsing passed.
 - OpenClaw example policy assertions passed, including explicit deny/allow lists, disabled cross-agent access, tree session visibility, disabled elevated/cron/restart, Docker network/root/capability controls and orchestrator-only delegation.
 - Synthetic bootstrap safety harness passed.
 - Budget-enabled synthetic durable control-plane E2E passed, including restart recovery, destination reconciliation, budget settlement, private backup verification and kill-switch enforcement.
 
-The latest changes also add strict bounded approval-token routing parsing, identity-boundary and identity-to-approval integration tests, plus a machine-readable OpenAPI contract and a separate independent destination-evidence verifier contract. Tests bind verifier identity separately from requester/executor, require exact destination evidence, reject unauthenticated, stale, mismatched or inconclusive outcomes, and exercise namespaced Auth0-style role claims. API scope/role extensions are checked against the identity allowlist.
+The latest changes also add strict bounded approval-token routing parsing, identity-boundary and identity-to-approval integration tests, a machine-readable OpenAPI contract, a separate independent destination-evidence verifier contract, and a pinned PyJWT 2.15.1 Auth0 RS256/JWKS verifier. The verifier pins issuer/audience and RS256, derives the JWKS URL from a trusted HTTPS issuer, bounds key fetch/cache, requires RFC 9068 `at+jwt` tokens with `jti` and `client_id`, and is integrated with the identity boundary in offline RSA tests. Tests bind verifier identity separately from requester/executor, require exact destination evidence, reject unauthenticated, stale, mismatched or inconclusive outcomes, and exercise namespaced Auth0-style role claims. API scope/role extensions are checked against the identity allowlist.
 
-These results validate local reference code only. They do not constitute production acceptance. No HTTP API, production IdP/JWT verifier, independent external verifier, real adapter, hosted queue, multi-host coordination, provider invoice metering, off-host backup automation, OpenClaw runtime validation or 7-day pilot exists yet. The OpenClaw configuration remains an example, not an installed or runtime-validated system. No user Mac install, database creation, production access, paid provisioning or deployment has occurred.
+These results validate local reference code only. They do not constitute production acceptance. No deployed HTTP API, Auth0 tenant, live JWKS verification, production revocation/session service, independent external verifier, real adapter, hosted queue, multi-host coordination, provider invoice metering, off-host backup automation, OpenClaw runtime validation or 7-day pilot exists yet. The OpenClaw configuration remains an example, not an installed or runtime-validated system. No user Mac install, database creation, production access, paid provisioning or deployment has occurred.
 
 ## Remaining activation blockers
 
