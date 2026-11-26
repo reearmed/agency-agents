@@ -19,6 +19,10 @@ One primary execution bet at a time. Research can cover all three; active build 
 - [Architecture](ARCHITECTURE.md): components, data flow, control plane and runtime.
 - [Agent roster](AGENT_ROSTER.md): selected source agents and their Business OS responsibilities.
 - [Autonomy policy](AUTONOMY.md): permissions, approval gates and stop conditions.
+- [Control plane specification](CONTROL_PLANE_SPEC.md): enforcement boundary, identity, idempotency, budget and fail-closed behavior.
+- [Execution protocol](EXECUTION_PROTOCOL.md): exact-payload approval and one-time execution lifecycle.
+- [Security acceptance tests](TESTS_AND_ACCEPTANCE.md): critical bypass, replay, budget, kill-switch and pilot tests.
+- [Incident response](INCIDENT_RESPONSE.md): containment, investigation and recovery runbook.
 - [Revenue workflows](REVENUE_WORKFLOWS.md): repeatable operating cycles.
 - [Data and security](DATA_SECURITY.md): isolation, secrets, privacy and retention.
 - [Memory architecture](MEMORY_ARCHITECTURE.md): operational state, curated shared knowledge and agent-local memory.
@@ -35,4 +39,4 @@ One primary execution bet at a time. Research can cover all three; active build 
 
 ## Not yet live
 
-No scheduler, agent runtime, database, credentials, integrations, deployment or background job is provisioned by these documents. Do not paste production secrets into this repository. Follow the runbook and test each integration with least privilege before enabling any live workflow.
+No scheduler, agent runtime, database, credentials, integrations, deployment, control-plane service or background job is provisioned by these documents. The control-plane and execution documents are specifications, not implemented enforcement. Do not paste production secrets into this repository. Follow the runbook and test each integration with least privilege before enabling any live workflow.
