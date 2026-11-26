@@ -23,7 +23,9 @@
       "exec", "process", "message", "browser", "gateway", "cron",
       "automations", "openclaw", "nodes", "computer", "sessions_send", "plugins"
     ],
-    exec: { mode: "deny" },
+    fs: { workspaceOnly: true },
+    sessions: { visibility: "tree" },
+    agentToAgent: { enabled: false },
     elevated: { enabled: false }
   },
   cron: { enabled: false },
@@ -32,7 +34,7 @@
     ownership: "explicit",
     defaults: {
       systemAgent: { agentId: "business-os-orchestrator" },
-      sandbox: { mode: "all", scope: "agent" }
+      sandbox: { mode: "all", scope: "agent", workspaceAccess: "rw" }
     },
     entries: {
       "business-os-orchestrator": {
