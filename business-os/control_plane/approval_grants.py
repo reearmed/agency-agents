@@ -350,6 +350,12 @@ class SQLiteGrantLedger:
             ).fetchone()
             if not row or row["state"] != "RESERVED":
                 raise GrantError("no active budget reservation to settle")
+            outcome = conn.execute(
+                "SELECT state, evidence_sha256 FROM execution_intents WHERE task_id=?",
+                (task_id,),
+            ).fetchone()
+            if not outcome or outcome["state"] not in {"SUCCEEDED", "FAILED"} or not outcome["evidence_sha256"]:
+                raise GrantError("budget settlement requires independently reconciled terminal outcome")
             if actual_minor > row["amount_minor"]:
                 raise GrantError("actual cost exceeds approved per-task reservation")
             usage = conn.execute(
@@ -395,6 +401,12 @@ class SQLiteGrantLedger:
             ).fetchone()
             if not row or row["state"] != "RESERVED":
                 raise GrantError("no active budget reservation to release")
+            outcome = conn.execute(
+                "SELECT state, evidence_sha256 FROM execution_intents WHERE task_id=?",
+                (task_id,),
+            ).fetchone()
+            if not outcome or outcome["state"] != "FAILED" or not outcome["evidence_sha256"]:
+                raise GrantError("budget release requires reconciled FAILED outcome with evidence")
             conn.execute(
                 """UPDATE execution_budget_reservations SET state='RELEASED',
                    updated_at=? WHERE task_id=? AND state='RESERVED'""",
