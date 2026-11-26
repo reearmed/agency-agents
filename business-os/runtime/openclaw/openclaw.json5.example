@@ -20,7 +20,7 @@
       ]
     },
     deny: [
-      "exec", "process", "message", "browser", "gateway", "cron",
+      "exec", "process", "apply_patch", "message", "browser", "gateway", "cron",
       "automations", "openclaw", "nodes", "computer", "sessions_send", "plugins"
     ],
     fs: { workspaceOnly: true },
