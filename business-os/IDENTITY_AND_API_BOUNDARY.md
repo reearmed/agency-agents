@@ -33,7 +33,9 @@ The component deliberately does not parse or verify JWT signatures itself. The i
 
 The human approval callback requires all three: the verified principal subject matches the approver ID, scope includes `business-os:approval:decide`, and role includes `business-os:human-approver`. Agent identities cannot satisfy the human role by setting a request field.
 
-## Machine-readable API contract\n\n`business-os/api/openapi.yaml` defines the intended authenticated API surface. It includes task proposals, safe task reads, internal artifact staging, approval requests/decisions, immutable period-budget configuration and kill-switch activation. It intentionally exposes no execution or adapter route. The API contract has static CI checks for required bearer security, route scopes, sensitive-operation roles, strict request schemas and unique operation IDs. The server URL is a placeholder and no server is deployed.\n\n## Minimum API middleware sequence
+## Machine-readable API contract
+
+`business-os/api/openapi.yaml` defines the intended authenticated API surface. It includes task proposals, safe task reads, internal artifact staging, approval requests/decisions, immutable period-budget configuration and kill-switch activation. It intentionally exposes no execution or adapter route. The API contract has static CI checks for required bearer security, route scopes, sensitive-operation roles, strict request schemas and unique operation IDs. The server URL is a placeholder and no server is deployed.\n\n## Minimum API middleware sequence
 
 1. Enforce TLS at the edge; reject oversized headers and request bodies.
 2. Extract one Bearer token and validate it through the trusted identity provider verifier.
