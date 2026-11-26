@@ -345,6 +345,29 @@ class DurableExecutionTests(unittest.TestCase):
             conn.close()
         self.assertFalse(self.ledger.verify_execution_integrity())
 
+    def test_concurrent_worker_recovery_dispatches_ready_intent_once(self):
+        from guardrails import canonical_json, payload_sha256
+        grant_id = self.gateway._grant_id_from_token(self.token)
+        self.authority.verify_and_consume(
+            self.token, task_id="task-1", payload=self.payload, adapter="mock",
+            action="create", target="sandbox-object", idempotency_key="idem-1",
+            requester_id="agent-1",
+            execution_intent={
+                "intent_id": grant_id, "task_id": "task-1", "idempotency_key": "idem-1",
+                "operation_json": canonical_json(self.payload).decode(),
+                "operation_sha256": payload_sha256(self.payload), "adapter": "mock",
+                "action": "create", "target": "sandbox-object",
+            },
+        )
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(
+                lambda worker: self.gateway.recover_ready(worker_id=worker),
+                ["recovery-a", "recovery-b"],
+            ))
+        self.assertEqual(sum(len(result) for result in results), 1)
+        self.assertEqual(self.adapter.call_count, 1)
+
     def test_concurrent_workers_cannot_claim_the_same_ready_intent(self):
         from guardrails import canonical_json, payload_sha256
         grant_id = self.gateway._grant_id_from_token(self.token)
