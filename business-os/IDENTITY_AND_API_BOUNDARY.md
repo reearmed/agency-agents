@@ -31,7 +31,7 @@ The component deliberately does not parse or verify JWT signatures itself. The i
 | `scope` | Space-delimited OAuth scopes |
 | `roles` | Array of role strings |
 
-The OpenAPI route scope/role extensions are tested against the same allowlist so a new route cannot silently introduce an unsupported permission. The human approval callback requires all three: the verified principal subject matches the approver ID, scope includes `business-os:approval:decide`, and role includes `business-os:human-approver`. Agent identities cannot satisfy the human role by setting a request field.
+The OpenAPI route scope/role extensions are tested against the same allowlist so a new route cannot silently introduce an unsupported permission. The internal independent-verifier service uses the separate `business-os:verification:record` scope and `business-os:independent-verifier` role; its subject must differ from requester and executor. The human approval callback requires all three: the verified principal subject matches the approver ID, scope includes `business-os:approval:decide`, and role includes `business-os:human-approver`. Agent identities cannot satisfy the human role by setting a request field.
 
 ## Machine-readable API contract
 
