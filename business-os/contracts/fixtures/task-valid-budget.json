@@ -1,0 +1,16 @@
+{
+  "task_id": "task-2026-000002",
+  "business_unit": "internal",
+  "task_type": "budgeted_synthetic_execution",
+  "risk_tier": "R2",
+  "payload": {"operation": "synthetic", "amount": 0},
+  "created_at": "2026-11-26T12:00:00Z",
+  "expires_at": "2026-11-26T13:00:00Z",
+  "idempotency_key": "budget-task-2026-000002",
+  "budget": {
+    "reservation_id": "budget-res-0002",
+    "amount_minor": 250,
+    "currency": "USD",
+    "period": "2026-11"
+  }
+}
