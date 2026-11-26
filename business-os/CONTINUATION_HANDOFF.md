@@ -21,7 +21,8 @@ Read this file first, then:
 9. `business-os/control_plane/README.md`
 10. `business-os/TESTS_AND_ACCEPTANCE.md`
 11. `business-os/DEPLOYMENT_RUNBOOK.md`
-12. `business-os/api/openapi.yaml`\n13. `business-os/runtime/openclaw/OPERATIONS.md`
+12. `business-os/api/openapi.yaml`
+13. `business-os/runtime/openclaw/OPERATIONS.md`
 
 Then inspect GitHub's current branch head, compare, pull requests and latest Actions before editing. Do not assume this handoff is newer than GitHub.
 
