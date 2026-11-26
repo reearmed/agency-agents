@@ -60,6 +60,8 @@ class Auth0JWTVerifier:
         # Never accept a JWKS URL from a token, request, or untrusted config.
         self._jwks = jwks_client or PyJWKClient(
             self.jwks_uri,
+            cache_keys=True,
+            max_cached_keys=16,
             cache_jwk_set=True,
             lifespan=jwks_cache_seconds,
             timeout=float(jwks_timeout_seconds),
@@ -73,6 +75,8 @@ class Auth0JWTVerifier:
             header = jwt.get_unverified_header(token)
             if header.get("alg") != "RS256":
                 raise Auth0JWTVerificationError("only RS256 access tokens are accepted")
+            if str(header.get("typ", "")).lower() != "at+jwt":
+                raise Auth0JWTVerificationError("RFC 9068 access-token type is required")
             kid = header.get("kid")
             if not isinstance(kid, str) or not kid or len(kid) > 256:
                 raise Auth0JWTVerificationError("a bounded signing key identifier is required")
@@ -85,7 +89,7 @@ class Auth0JWTVerifier:
                 issuer=self.issuer,
                 leeway=self.leeway_seconds,
                 options={
-                    "require": ["iss", "sub", "aud", "exp", "iat", "jti"],
+                    "require": ["iss", "sub", "aud", "exp", "iat", "jti", "client_id"],
                     "verify_signature": True,
                     "verify_exp": True,
                     "verify_iat": True,
