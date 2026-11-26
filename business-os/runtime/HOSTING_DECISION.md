@@ -39,6 +39,17 @@ Gateway on loopback, accessing it through SSH or Tailscale, and backing up
 state/workspaces. Use an official pinned prebuilt image and confirm the Docker
 sandbox workload fits before scaling concurrency.
 
+## Identity provider candidate and first-month baseline
+
+Auth0 Public Cloud Canada, Essentials is the current managed identity candidate: **US$35/month** as published, up to 500 MAU, with Pro MFA and RBAC. Auth0 documents the Canadian public-cloud tenant region. Its pricing comparison lists 1,000 M2M authentications on Essentials; confirm the exact quota unit and service-token refresh strategy before relying on it. Do not use the Free plan for the privileged operator because the current comparison excludes Pro MFA. No Auth0 tenant is provisioned.
+
+Indicative recurring baseline if the recommended host and this identity tier are selected:
+- DigitalOcean Basic Toronto: US$48/month.
+- Auth0 Essentials Canada: US$35/month.
+- **Combined: approximately US$83/month before tax**, excluding model/API usage, optional backups/monitoring, separate database/queue, and other services.
+
+This is a planning estimate only, not authorization to purchase. A separate Business OS database remains a separate cost decision. If Auth0's M2M quota is inadequate, reassess a higher tier or self-hosted OIDC alternative before provisioning.
+
 ## Initial footprint
 
 | Item | Proposed setting |
