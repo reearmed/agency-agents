@@ -71,7 +71,37 @@ jobs:
           yaml.safe_load((root / "config/tool-permissions.yaml").read_text())
           config = json5.loads((root / "runtime/openclaw/openclaw.json5.example").read_text())
           assert isinstance(config, dict), "OpenClaw example must be an object"
-          print("PASS JSON, YAML and JSON5 configuration syntax")
+
+          # Assert the actual least-privilege policy, not only JSON5 syntax.
+          tools = config["tools"]
+          forbidden = {"exec", "process", "apply_patch", "message", "browser", "gateway",
+                       "cron", "automations", "openclaw", "nodes", "computer", "sessions_send", "plugins"}
+          assert forbidden.issubset(set(tools["deny"]))
+          assert not (forbidden & set(tools["gatewayPolicy"]["allow"]))
+          assert not (forbidden & set(tools["sandbox"]["tools"]["allow"]))
+          assert tools["agentToAgent"]["enabled"] is False
+          assert tools["sessions"]["visibility"] == "tree"
+          assert tools["elevated"]["enabled"] is False
+          assert config["cron"]["enabled"] is False
+          assert config["commands"]["restart"] is False
+
+          sandbox = config["agents"]["defaults"]["sandbox"]
+          assert sandbox["mode"] == "all" and sandbox["backend"] == "docker"
+          assert sandbox["scope"] == "agent" and sandbox["workspaceAccess"] == "rw"
+          assert sandbox["docker"]["network"] == "none"
+          assert sandbox["docker"]["readOnlyRoot"] is True
+          assert set(sandbox["docker"]["capDrop"]) == {"ALL"}
+
+          agents = config["agents"]["entries"]
+          orchestrator = "business-os-orchestrator"
+          assert len(agents) == 9 and orchestrator in agents
+          expected_children = set(agents) - {orchestrator}
+          assert set(agents[orchestrator]["subagents"]["allowAgents"]) == expected_children
+          for agent_id, agent in agents.items():
+              if agent_id != orchestrator:
+                  assert agent["subagents"]["allowAgents"] == []
+          assert not config.get("channels") and not config.get("plugins")
+          print("PASS JSON, YAML, JSON5 syntax and OpenClaw least-privilege policy")
           PY
           bash -n scripts/bootstrap-business-os-openclaw.sh
           bash -n scripts/test-bootstrap-business-os-openclaw.sh
