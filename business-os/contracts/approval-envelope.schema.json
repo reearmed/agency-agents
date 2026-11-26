@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://norevyo.com/schemas/business-os/approval-envelope.schema.json",
+  "title": "Business OS approval envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["approval_id", "task_id", "payload_sha256", "approver_id", "decision", "approved_at", "expires_at", "scope"],
+  "properties": {
+    "approval_id": {"type": "string", "minLength": 8, "maxLength": 128},
+    "task_id": {"type": "string", "minLength": 8, "maxLength": 128},
+    "payload_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "approver_id": {"type": "string", "minLength": 1, "maxLength": 256},
+    "decision": {"type": "string", "enum": ["approved", "rejected"]},
+    "approved_at": {"type": "string", "format": "date-time"},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "scope": {"type": "object", "additionalProperties": false, "required": ["adapter", "action", "target"], "properties": {"adapter": {"type": "string", "minLength": 1, "maxLength": 100}, "action": {"type": "string", "minLength": 1, "maxLength": 100}, "target": {"type": "string", "minLength": 1, "maxLength": 512}}}
+  }
+}
