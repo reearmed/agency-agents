@@ -23,6 +23,7 @@ One primary execution bet at a time. Research can cover all three; active build 
 - [Execution protocol](EXECUTION_PROTOCOL.md): exact-payload approval and one-time execution lifecycle.
 - [Security acceptance tests](TESTS_AND_ACCEPTANCE.md): critical bypass, replay, budget, kill-switch and pilot tests.
 - [Incident response](INCIDENT_RESPONSE.md): containment, investigation and recovery runbook.
+- [Implementation backlog](IMPLEMENTATION_BACKLOG.md): sequenced infrastructure, safety and revenue milestones.
 - [Revenue workflows](REVENUE_WORKFLOWS.md): repeatable operating cycles.
 - [Data and security](DATA_SECURITY.md): isolation, secrets, privacy and retention.
 - [Memory architecture](MEMORY_ARCHITECTURE.md): operational state, curated shared knowledge and agent-local memory.
