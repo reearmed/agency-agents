@@ -48,8 +48,8 @@ The user wants useful autonomous work, not just an architecture document. Keep m
 ## What has been done
 
 A branch named `business-os/blueprint` was created from `main`. The latest verified comparison before this handoff showed:
-- most recent comparison before this handoff cleanup: 86 commits ahead and 2 behind;
-- 48 changed paths;
+- the branch remains diverged from main by two main-only correction commits; its last exact ahead/behind comparison must be rechecked before any branch operation;
+- 48 changed paths at the last comparison;
 - the two commits on main not in this branch are the accidental handoff add/delete correction pair. The file is absent from main again; do not rewrite history, merge, or rebase without explicit approval.
 - changed paths are within `business-os/`, `scripts/bootstrap-business-os-openclaw.sh`, and the dedicated test-only workflow `.github/workflows/business-os-safety-tests.yml`.
 
@@ -127,7 +127,7 @@ Continue my existing Business OS implementation from the GitHub repository https
 
 ## Verified work notes
 
-- The bootstrap script content was checked with bash -n in an isolated temporary environment; syntax check passed. shellcheck was unavailable. The script was not applied.
+- The bootstrap helper was checked with bash -n and exercised in an isolated synthetic repository: dry-run created no files; apply created nine workspaces and 45 files; a second apply refused overwrite; a symlinked parent path and a relative destination were rejected. These tests used a temporary harness, not the user's Mac. The helper was not applied on the user's machine. shellcheck was unavailable.
 - The control-plane prototype now stores the original task payload hash at proposal time and requires the approval to match it. Terminal success/failure cannot be reached through the generic transition method; the test API requires a verifier identifier and a 64-character SHA-256 evidence reference. Twenty-one unit tests are present, but a successful test run has not yet been confirmed.
 - The OpenClaw example now explicitly limits sandbox tools, sets Docker network to none, uses a read-only container root, drops all Linux capabilities, keeps session visibility at tree, disables ordinary agent-to-agent access, and limits child depth to one. Current official docs support these configuration concepts. The exact example still needs validation with the selected pinned OpenClaw binary and an actual sandbox smoke test.
 - The GitHub Actions workflow is committed and push-triggered on this branch, but the available connector did not expose the workflow run list/result. Commit status was empty. Do not claim CI passed.
