@@ -45,7 +45,7 @@ class TaskState(str, Enum):
 
 
 _ALLOWED_TRANSITIONS = {
-    TaskState.PROPOSED: {TaskState.APPROVED, TaskState.BLOCKED},
+    TaskState.PROPOSED: {TaskState.BLOCKED},
     TaskState.APPROVED: {TaskState.EXECUTING, TaskState.BLOCKED},
     TaskState.EXECUTING: {TaskState.SUCCEEDED, TaskState.FAILED, TaskState.UNKNOWN, TaskState.BLOCKED},
     TaskState.UNKNOWN: {TaskState.SUCCEEDED, TaskState.FAILED, TaskState.BLOCKED},
