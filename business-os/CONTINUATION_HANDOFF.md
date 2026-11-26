@@ -3,7 +3,7 @@
 **Last updated:** 26 November 2026  
 **Repository:** https://github.com/reearmed/agency-agents  
 **Working branch:** `business-os/blueprint`  
-**Last tested code commit:** `8edbb297c2546e41418e55bd6a1084274d756525` (the later commits are documentation-only; always inspect the live branch ref before proceeding)  
+**Last tested code commit:** `803276e72a3ea78fdbce44ec741d9176fe8316b5` (the later commits are documentation-only; always inspect the live branch ref before proceeding)  
 **Base branch:** `main`  
 **Status:** guarded architecture, nine agent definitions, local mock-only control plane, durable SQLite outbox/budget prototype, strict identity boundary component, CI and synthetic tests. **Not deployed, not running, and not connected to external actions.**
 
@@ -54,13 +54,13 @@ Autonomy is guarded. Internal research, analysis, code, drafts and synthetic tes
 
 - Fork: `reearmed/agency-agents`.
 - Branch: `business-os/blueprint`.
-- Exact branch head: `8edbb297c2546e41418e55bd6a1084274d756525`.
-- Compare against `main`: Last full compare snapshot before the final handoff-formatting commits: **333 commits ahead, 2 behind, 71 changed paths**. All subsequent commits are documentation-only; recheck the live compare before any branch operation.
+- Exact branch head: `803276e72a3ea78fdbce44ec741d9176fe8316b5`.
+- Compare against `main`: Last full compare snapshot before the final handoff-formatting commits: **347 commits ahead, 2 behind, 71 changed paths**. All subsequent commits are documentation-only; recheck the live compare before any branch operation.
 - The two commits behind are the previously disclosed handoff add/delete correction pair. Do not rebase, force-push, rewrite history or merge to resolve this without explicit approval.
 - The 71 changed paths are confined to `business-os/`, `scripts/bootstrap-business-os-openclaw.sh`, `scripts/test-bootstrap-business-os-openclaw.sh`, and `.github/workflows/business-os-safety-tests.yml`.
 - No open pull requests were returned in the latest check.
-- Latest code-test CI: [run 45885579756](https://github.com/reearmed/agency-agents/actions/runs/45885579756), completed successfully on tested code commit `8edbb297c2546e41418e55bd6a1084274d756525`. Later commits only refreshed documentation; verify the latest Actions run before continuing.
-- Latest CI evidence: six JSON Schema fixtures, **145 Python unit tests**, JSON/YAML/JSON5 config checks, OpenClaw policy assertions, bootstrap safety harness and budget-enabled synthetic durable E2E all passed.
+- Latest code-test CI: [run 45885999525](https://github.com/reearmed/agency-agents/actions/runs/45885579756), completed successfully on tested code commit `803276e72a3ea78fdbce44ec741d9176fe8316b5`. Later commits only refreshed documentation; verify the latest Actions run before continuing.
+- Latest CI evidence: six JSON Schema fixtures, **147 Python unit tests**, JSON/YAML/JSON5 config checks, OpenClaw policy assertions, bootstrap safety harness and budget-enabled synthetic durable E2E all passed.
 - No PR was created, no merge/rebase was performed, no production deployment occurred and no infrastructure was provisioned.
 
 ## Implemented repository deliverables
@@ -92,15 +92,15 @@ Autonomy is guarded. Internal research, analysis, code, drafts and synthetic tes
 ### Identity boundary and API contract (new)
 - `identity_boundary.py` adds bounded Bearer parsing, injected cryptographic token-verifier seam, exact issuer/audience checks, subject/token-ID requirements, expiry/not-before/issued-at/maximum-lifetime checks, scopes and roles.
 - Produces a minimal immutable principal without retaining the bearer token.
-- `human_approver_identity_verifier` is a callback for the existing approval authority. It requires the verified subject to match the approver ID and requires both `business-os:approval:decide` scope and `business-os:human-approver` role.
+- `human_approver_identity_verifier` is a callback for the existing approval authority. It requires the verified subject to match the approver ID and requires both `business-os:approval:decide` scope and `business-os:human-approver` role. The identity boundary filters scopes and roles through explicit Business OS allowlists; unknown claims do not grant privileges, and API contract tests verify every route scope/role against those allowlists.
 - `durable_execution.py` now bounds and strictly parses the untrusted grant ID routing hint before the approval authority independently verifies the HMAC, schema, expiry and exact scope.
 - An integration test now proves the verified human-principal callback works with `ApprovalGrantAuthority.issue`, and rejects a wrong subject or a principal lacking the human role/scope. A machine-readable OpenAPI 3.1 contract at `business-os/api/openapi.yaml` now defines task submission, safe reads, internal artifact staging, approval requests/decisions, immutable budget configuration and kill-switch activation. It deliberately exposes no execution or adapter route; all mutations require bearer security plus route scopes, and sensitive operations require roles. Static tests check these boundaries. This is a contract only, not a running API. These are local components and test seams, not a production IdP, cryptographic JWT verifier, authenticated API or HTTP service. Synthetic tests do not prove production identity.
 
 ### CI and test evidence
 - Workflow: `.github/workflows/business-os-safety-tests.yml`.
 - Latest successful run: [45885579756](https://github.com/reearmed/agency-agents/actions/runs/45885579756).
-- Hosted CI passed **145 Python unit tests**, six JSON Schema fixtures, JSON/YAML/JSON5 parsing, OpenClaw config policy assertions, synthetic bootstrap safety checks and budget-enabled durable E2E.
-- The latest run included strict token-parser tests, identity-boundary tests, end-to-end identity-to-approval integration tests and OpenAPI contract safety tests. Subsequent commits updated documentation only.
+- Hosted CI passed **147 Python unit tests**, six JSON Schema fixtures, JSON/YAML/JSON5 parsing, OpenClaw config policy assertions, synthetic bootstrap safety checks and budget-enabled durable E2E.
+- The latest run included strict token-parser tests, identity-boundary tests, end-to-end identity-to-approval integration tests, Business OS scope/role allowlist tests and OpenAPI contract safety tests. Subsequent commits updated documentation only.
 - No local Mac test has been performed. The bootstrap helper has not been applied to the user's Mac.
 
 ## Runtime, data and budget status
