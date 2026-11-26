@@ -67,6 +67,23 @@ CREATE TABLE business_os.task_events (
 
 CREATE INDEX task_events_task_created_idx ON business_os.task_events(task_id, created_at);
 
+-- Audit events are append-only: updates and deletes fail even for the worker role.
+CREATE OR REPLACE FUNCTION business_os.prevent_task_event_mutation()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $
+BEGIN
+  RAISE EXCEPTION 'business_os.task_events is append-only';
+END;
+$;
+
+CREATE TRIGGER task_events_append_only
+BEFORE UPDATE OR DELETE ON business_os.task_events
+FOR EACH ROW EXECUTE FUNCTION business_os.prevent_task_event_mutation();
+
+REVOKE ALL ON FUNCTION business_os.prevent_task_event_mutation() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION business_os.prevent_task_event_mutation() TO service_role;
+
 CREATE TABLE business_os.approvals (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   task_id uuid NOT NULL REFERENCES business_os.tasks(id) ON DELETE RESTRICT,
