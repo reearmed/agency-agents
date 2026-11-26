@@ -3,7 +3,7 @@
 **Last updated:** 26 November 2026  
 **Repository:** https://github.com/reearmed/agency-agents  
 **Working branch:** `business-os/blueprint`  
-**Last tested code commit:** `803276e72a3ea78fdbce44ec741d9176fe8316b5` (the later commits are documentation-only; always inspect the live branch ref before proceeding)  
+**Last tested code commit:** `09f0ba6df0e0cce64ceab76b2703f7e7adb53c3b` (the later commits are documentation-only; always inspect the live branch ref before proceeding)  
 **Base branch:** `main`  
 **Status:** guarded architecture, nine agent definitions, local mock-only control plane, durable SQLite outbox/budget prototype, strict identity boundary component, CI and synthetic tests. **Not deployed, not running, and not connected to external actions.**
 
@@ -17,12 +17,13 @@ Read this file first, then:
 5. `business-os/AUTONOMY.md`
 6. `business-os/CONTROL_PLANE_SPEC.md`
 7. `business-os/IDENTITY_AND_API_BOUNDARY.md`
-8. `business-os/EXECUTION_PROTOCOL.md`
-9. `business-os/control_plane/README.md`
-10. `business-os/TESTS_AND_ACCEPTANCE.md`
-11. `business-os/DEPLOYMENT_RUNBOOK.md`
-12. `business-os/api/openapi.yaml`
-13. `business-os/runtime/openclaw/OPERATIONS.md`
+8. `business-os/VERIFICATION_CONTRACT.md`
+9. `business-os/EXECUTION_PROTOCOL.md`
+10. `business-os/control_plane/README.md`
+11. `business-os/TESTS_AND_ACCEPTANCE.md`
+12. `business-os/DEPLOYMENT_RUNBOOK.md`
+13. `business-os/api/openapi.yaml`
+14. `business-os/runtime/openclaw/OPERATIONS.md`
 
 Then inspect GitHub's current branch head, compare, pull requests and latest Actions before editing. Do not assume this handoff is newer than GitHub.
 
@@ -60,7 +61,7 @@ Autonomy is guarded. Internal research, analysis, code, drafts and synthetic tes
 - The 71 changed paths are confined to `business-os/`, `scripts/bootstrap-business-os-openclaw.sh`, `scripts/test-bootstrap-business-os-openclaw.sh`, and `.github/workflows/business-os-safety-tests.yml`.
 - No open pull requests were returned in the latest check.
 - Latest code-test CI: [run 45885999525](https://github.com/reearmed/agency-agents/actions/runs/45885579756), completed successfully on tested code commit `803276e72a3ea78fdbce44ec741d9176fe8316b5`. Later commits only refreshed documentation; verify the latest Actions run before continuing.
-- Latest CI evidence: six JSON Schema fixtures, **147 Python unit tests**, JSON/YAML/JSON5 config checks, OpenClaw policy assertions, bootstrap safety harness and budget-enabled synthetic durable E2E all passed.
+- Latest CI evidence: six JSON Schema fixtures, **155 Python unit tests**, JSON/YAML/JSON5 config checks, OpenClaw policy assertions, bootstrap safety harness and budget-enabled synthetic durable E2E all passed.
 - No PR was created, no merge/rebase was performed, no production deployment occurred and no infrastructure was provisioned.
 
 ## Implemented repository deliverables
@@ -96,12 +97,22 @@ Autonomy is guarded. Internal research, analysis, code, drafts and synthetic tes
 - `durable_execution.py` now bounds and strictly parses the untrusted grant ID routing hint before the approval authority independently verifies the HMAC, schema, expiry and exact scope.
 - An integration test now proves the verified human-principal callback works with `ApprovalGrantAuthority.issue`, and rejects a wrong subject or a principal lacking the human role/scope. A machine-readable OpenAPI 3.1 contract at `business-os/api/openapi.yaml` now defines task submission, safe reads, internal artifact staging, approval requests/decisions, immutable budget configuration and kill-switch activation. It deliberately exposes no execution or adapter route; all mutations require bearer security plus route scopes, and sensitive operations require roles. Static tests check these boundaries. This is a contract only, not a running API. These are local components and test seams, not a production IdP, cryptographic JWT verifier, authenticated API or HTTP service. Synthetic tests do not prove production identity.
 
+### Independent verifier contract (new)
+- `independent_verifier.py` requires a verified service principal with the internal verification scope and independent-verifier role, distinct from requester and executor.
+- It fetches destination evidence through an injected reader and authenticator; checks exact task/adapter/action/target/environment/idempotency/payload-hash binding, trusted source, terminal outcome, timestamp freshness and evidence digest.
+- Tests cover mismatched payload/target/key, untrusted or unauthenticated evidence, malformed/inconclusive outcomes, stale/future timestamps, reader failures and verifier identity separation.
+- This remains a local contract with synthetic callbacks. It is not wired to the mock durable gateway or a real destination; no external evidence source exists.
+
 ### CI and test evidence
 - Workflow: `.github/workflows/business-os-safety-tests.yml`.
 - Latest successful run: [45885579756](https://github.com/reearmed/agency-agents/actions/runs/45885579756).
 - Hosted CI passed **147 Python unit tests**, six JSON Schema fixtures, JSON/YAML/JSON5 parsing, OpenClaw config policy assertions, synthetic bootstrap safety checks and budget-enabled durable E2E.
-- The latest run included strict token-parser tests, identity-boundary tests, end-to-end identity-to-approval integration tests, Business OS scope/role allowlist tests and OpenAPI contract safety tests. Subsequent commits updated documentation only.
+- The latest run included strict token-parser tests, identity-boundary tests, end-to-end identity-to-approval integration tests, Business OS scope/role allowlist tests, independent-verifier evidence tests and OpenAPI contract safety tests. Subsequent commits updated documentation only.
 - No local Mac test has been performed. The bootstrap helper has not been applied to the user's Mac.
+
+## Repository safety incident and restoration
+
+Two documentation-only writes were accidentally sent to `main` because the branch parameter was omitted. The files were confirmed absent at the pre-incident `main` commit `6fcd4492b50b8bdf3176172a1786a2dc23315e5c`; both files were deleted from `main` immediately afterward. A compare of the current `main` tree against that pre-incident commit reports **zero changed files**. The four add/delete commits remain in `main` history, so the feature branch now reports six commits behind instead of the two previously reported. No code, workflow, production or existing main-file content remains changed by the incident. Do not rewrite history or make any further `main` changes.
 
 ## Runtime, data and budget status
 
