@@ -49,7 +49,7 @@ The user wants useful autonomous work, not just an architecture document. Keep m
 
 A branch named `business-os/blueprint` was created from `main`. The latest verified comparison before this handoff showed:
 - branch status: ahead;
-- ahead by 74 commits;
+- ahead by 77 commits;
 - behind by 2 commits (main contains an add/delete correction pair; its file tree was restored to the prior state);
 - 48 changed paths;
 - changed paths are within `business-os/`, `scripts/bootstrap-business-os-openclaw.sh`, and the dedicated test-only workflow `.github/workflows/business-os-safety-tests.yml`.
@@ -67,7 +67,7 @@ The two commits on `main` not in this branch are an accidental add/delete correc
 - Guarded autonomy policy, task contract, deployment runbook and activation blockers.
 - Control-plane specification, exact-payload execution protocol, security acceptance tests, incident-response runbook and implementation backlog.
 - Added strict task/approval JSON Schemas and valid/invalid fixtures under `business-os/contracts/`.
-- Added local-only in-memory control-plane primitives and unit tests under `business-os/control_plane/` for canonical payload hashing, approval binding, state transitions, idempotency, budget caps and fail-closed audit behavior.
+- Added local-only in-memory control-plane primitives and unit tests under `business-os/control_plane/` for canonical payload hashing, approval binding, state transitions, idempotency, budget caps and fail-closed audit behavior, including a kill switch that still engages when audit logging is unavailable.
 - Added `.github/workflows/business-os-safety-tests.yml` to validate schemas/fixtures and run unit tests on the feature branch.
 - Tightened the OpenClaw example using current documentation for sandbox backend controls, `tools.agentToAgent`, session visibility, and per-agent subagent allowlists.
 
@@ -130,6 +130,12 @@ Continue my existing Business OS implementation from the GitHub repository https
 - The bootstrap script content was checked with `bash -n` in an isolated temporary environment; syntax check passed. `shellcheck` was unavailable. The script was not applied.
 - Current upstream OpenClaw documentation supports the `tools.gatewayPolicy`, `tools.agentToAgent`, `tools.sessions.visibility`, `agents.entries.*.subagents.allowAgents`, and Docker sandbox configuration concepts. The example still requires `openclaw config schema` validation using the exact pinned release before installation.
 - The GitHub Actions workflow is committed, but the connector did not expose a run result and commit status is empty. Do not claim CI passed.
+
+## Verified work notes
+
+- The bootstrap script content was checked with `bash -n` in an isolated temporary environment; syntax check passed. `shellcheck` was unavailable. The script was not applied.
+- Current upstream OpenClaw documentation supports the `tools.gatewayPolicy`, `tools.agentToAgent`, `tools.sessions.visibility`, `agents.entries.*.subagents.allowAgents`, and Docker sandbox configuration concepts. The example still requires `openclaw config schema` validation using the exact pinned release before installation.
+- The GitHub Actions workflow is committed, but a workflow run result could not be retrieved through the available GitHub actions interface and commit status is empty. Do not claim CI passed.
 
 ## Final truth statement
 
