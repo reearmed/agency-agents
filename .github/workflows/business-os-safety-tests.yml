@@ -9,7 +9,7 @@ on:
       - "scripts/test-bootstrap-business-os-openclaw.sh"
       - ".github/workflows/business-os-safety-tests.yml"
   pull_request:
-    branches: ["business-os/blueprint"]
+    branches: ["main", "business-os/blueprint"]
     paths:
       - "business-os/**"
       - "scripts/bootstrap-business-os-openclaw.sh"
