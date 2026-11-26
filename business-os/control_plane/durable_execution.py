@@ -107,6 +107,11 @@ class DurableMockExecutionGateway:
             raise DurableExecutionError("execution intent disappeared")
         return result
 
+    def recover_expired_dispatches(self) -> list[Mapping[str, Any]]:
+        """Convert expired worker claims to UNKNOWN and return work requiring reconciliation."""
+        self.ledger.recover_stale_dispatches()
+        return self.ledger.list_reconcilable_intents()
+
     def recover_ready(self, *, worker_id: str) -> list[Mapping[str, Any]]:
         recovered = []
         for intent in self.ledger.list_ready_intents():
