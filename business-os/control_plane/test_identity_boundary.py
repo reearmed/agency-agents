@@ -49,7 +49,7 @@ class IdentityBoundaryTests(unittest.TestCase):
         self.assertIsInstance(principal, VerifiedPrincipal)
 
     def test_rejects_missing_or_malformed_bearer_header(self):
-        for header in ("", "signed-test-token", "Basic signed-test-token", "Bearer a b", None):
+        for header in ("", "signed-test-token", "Basic signed-test-token", "Bearer a b", "Bearer  token", "Bearer\ttoken", None):
             with self.subTest(header=header):
                 with self.assertRaises(IdentityError):
                     self.boundary.authenticate(header)
@@ -71,6 +71,7 @@ class IdentityBoundaryTests(unittest.TestCase):
             {"nbf": NOW + 100},
             {"exp": NOW + 7200},
             {"exp": True},
+            {"exp": 10 ** 10000},
         )
         for changed in invalid:
             self.token_claims = claims(**changed)
