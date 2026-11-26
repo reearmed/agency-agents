@@ -249,6 +249,11 @@ class SQLiteGrantLedger:
         conn = self._connect()
         try:
             conn.execute("BEGIN IMMEDIATE")
+            switch = conn.execute(
+                "SELECT value FROM control_state WHERE key='kill_switch'"
+            ).fetchone()
+            if switch and switch["value"] == "true":
+                raise GrantError("persistent kill switch active; grant consumption denied")
             conn.execute(
                 "INSERT INTO consumed_grants(grant_id, grant_sha256, consumed_at) VALUES (?, ?, ?)",
                 (grant_id, grant_sha256, datetime.now(timezone.utc).isoformat()),
