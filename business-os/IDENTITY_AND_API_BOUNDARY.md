@@ -50,6 +50,21 @@ Alternatives reviewed:
 - Clerk's current security page says regional data residency is not offered and data is US-hosted; it is not suitable if Canadian residency is a hard requirement.
 - WorkOS AuthKit advertises a free tier, but its security review says customer data is hosted in AWS us-east-1 with backups in us-west-2; not suitable for a strict Canadian-only data boundary.
 
+For the Auth0 candidate, the planned integration is: register a custom API with the exact Business OS scopes; enable RBAC and the **Add Permissions in the Access Token** setting; use the RFC 9068 JWT access-token profile and verify that issued tokens contain the required `jti`; add human roles as a namespaced access-token claim and configure `IdentityBoundary(role_claim="https://norevyo.com/claims/roles")`. The documented Auth0 Post-Login Action pattern is:
+
+```javascript
+exports.onExecutePostLogin = async (event, api) => {
+  if (event.authorization) {
+    api.accessToken.setCustomClaim(
+      'https://norevyo.com/claims/roles',
+      event.authorization.roles,
+    );
+  }
+};
+```
+
+Machine identities must use separate client-credentials applications and service-specific scopes/roles; they must never receive the human-approver role. Configure and test the exact machine-token claim mapping separately. No real token or Auth0 Action has been created.
+
 This is a research recommendation, not a selected provider or purchase. Before selection, confirm Canadian tenant availability for the exact plan, DPA/subprocessors, backup/log location, M2M quotas, token lifetime/rotation, revocation behavior and any restrictions on machine identities. No tenant has been created and no credentials are stored.
 
 Sources:
