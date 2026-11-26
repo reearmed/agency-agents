@@ -45,17 +45,17 @@ Run a 7-day internal-only pilot using synthetic or explicitly approved low-risk 
 
 ## Current prototype evidence (26 November 2026)
 
-Latest feature-branch CI run: [45885385292](https://github.com/reearmed/agency-agents/actions/runs/45885385292), on commit `12fd2b512134cd823f26962aad0a2a9748b96297`.
+Latest feature-branch CI run: [45885579756](https://github.com/reearmed/agency-agents/actions/runs/45885579756), on commit `8edbb297c2546e41418e55bd6a1084274d756525`.
 
 Verified by hosted CI:
-- **139 Python unit tests passed** (`Ran 139 tests ... OK`).
+- **145 Python unit tests passed** (`Ran 145 tests ... OK`).
 - Six JSON Schema fixtures passed.
 - JSON, YAML and JSON5 configuration parsing passed.
 - OpenClaw example policy assertions passed, including explicit deny/allow lists, disabled cross-agent access, tree session visibility, disabled elevated/cron/restart, Docker network/root/capability controls and orchestrator-only delegation.
 - Synthetic bootstrap safety harness passed.
 - Budget-enabled synthetic durable control-plane E2E passed, including restart recovery, destination reconciliation, budget settlement, private backup verification and kill-switch enforcement.
 
-The latest changes also add strict bounded approval-token routing parsing with regression tests, plus a local identity-boundary component with synthetic tests for Bearer parsing, issuer/audience, expiry/not-before/issued-at, token lifetime, scopes, roles and human-approver matching.
+The latest changes also add strict bounded approval-token routing parsing with regression tests, plus a local identity-boundary component and a machine-readable OpenAPI control-plane contract with synthetic tests for Bearer parsing, issuer/audience, expiry/not-before/issued-at, token lifetime, scopes, roles and human-approver matching.
 
 These results validate local reference code only. They do not constitute production acceptance. No HTTP API, production IdP/JWT verifier, independent external verifier, real adapter, hosted queue, multi-host coordination, provider invoice metering, off-host backup automation, OpenClaw runtime validation or 7-day pilot exists yet. The OpenClaw configuration remains an example, not an installed or runtime-validated system. No user Mac install, database creation, production access, paid provisioning or deployment has occurred.
 
