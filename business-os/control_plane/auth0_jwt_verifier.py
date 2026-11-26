@@ -65,7 +65,6 @@ class Auth0JWTVerifier:
             cache_jwk_set=True,
             lifespan=jwks_cache_seconds,
             timeout=float(jwks_timeout_seconds),
-            max_cached_keys=16,
         )
 
     def __call__(self, token: str) -> dict[str, Any]:
