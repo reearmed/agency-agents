@@ -11,7 +11,6 @@ from datetime import datetime, timedelta, timezone
 import base64
 import hashlib
 import hmac
-import hashlib
 import json
 import os
 import re
@@ -26,6 +25,17 @@ from guardrails import canonical_json, payload_sha256
 
 class GrantError(Exception):
     """Approval grant rejected; callers must fail closed."""
+
+
+def _reject_symlink_components(path: Path) -> None:
+    """Reject symlink traversal in every existing component of an absolute path."""
+    if not path.is_absolute() or ".." in path.parts:
+        raise ValueError("path must be absolute and must not contain '..'")
+    current = Path(path.anchor)
+    for component in path.parts[1:]:
+        current = current / component
+        if current.is_symlink():
+            raise ValueError("path must not traverse symlink components")
 
 
 def _b64encode(value: bytes) -> str:
@@ -47,9 +57,11 @@ class SQLiteGrantLedger:
     def __init__(self, db_path: str | Path):
         raw = str(db_path)
         path = Path(db_path)
-        if raw == ":memory:" or not path.is_absolute() or path.is_symlink():
-            raise ValueError("ledger path must be an absolute persistent non-symlink path")
+        if raw == ":memory:" or not path.is_absolute():
+            raise ValueError("ledger path must be an absolute persistent filesystem path")
+        _reject_symlink_components(path)
         path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        _reject_symlink_components(path)
         if stat.S_IMODE(path.parent.stat().st_mode) & 0o077:
             raise ValueError("ledger directory must be private (0700 or stricter)")
         existed = path.exists()
@@ -936,11 +948,13 @@ class SQLiteGrantLedger:
     def backup_to(self, destination_path: str | Path) -> Path:
         """Create a new private SQLite-consistent backup and verify its integrity."""
         destination = Path(destination_path)
-        if not destination.is_absolute() or destination.is_symlink():
-            raise ValueError("backup path must be absolute and must not be a symlink")
+        if not destination.is_absolute():
+            raise ValueError("backup path must be absolute")
+        _reject_symlink_components(destination)
         if destination.resolve() == Path(self.path).resolve():
             raise ValueError("backup destination must differ from the live ledger")
         destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        _reject_symlink_components(destination)
         if stat.S_IMODE(destination.parent.stat().st_mode) & 0o077:
             raise ValueError("backup directory must be private (0700 or stricter)")
         if destination.exists():
