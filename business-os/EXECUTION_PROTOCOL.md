@@ -32,6 +32,17 @@ The control plane issues a one-use execution grant bound to the approved hash, a
 
 If the adapter times out, do not blindly retry. Query the destination to determine whether the action already occurred. Retry only with the same idempotency key when the destination's semantics guarantee deduplication.
 
+### Prototype boundary (not production authorization)
+
+The repository's `execution_gateway.py` is a test harness only. It accepts
+only a synthetic mock adapter and mock verifier; it is not an implementation
+of the real adapter protocol described above. Its execution state is volatile
+and cannot recover a process crash between grant consumption and adapter
+invocation. Do not connect email, publishing, payments, CRM, cloud, GitHub,
+production infrastructure or other real-world adapters to this prototype.
+A durable execution intent/outbox and authenticated service must be completed
+and tested before this boundary is revisited.
+
 ## 5. Verify and close
 
 A separate verifier checks destination state or authoritative evidence against expected outcome. Store evidence references and result. If verification fails or is ambiguous, mark `blocked` or `failed`, activate the relevant pause if necessary, and notify the operator through an approved internal channel.
