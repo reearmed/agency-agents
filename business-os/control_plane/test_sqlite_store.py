@@ -1,4 +1,5 @@
 import sqlite3
+import stat
 import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
@@ -174,6 +175,23 @@ class SQLiteControlPlaneTests(unittest.TestCase):
             SQLiteControlPlane(":memory:", monthly_budget=1)
         with self.assertRaises(ValueError):
             SQLiteControlPlane("relative.sqlite3", monthly_budget=1)
+
+    def test_database_file_is_created_with_private_permissions(self):
+        self.assertEqual(stat.S_IMODE(self.db_path.stat().st_mode), 0o600)
+
+    def test_existing_database_with_broad_permissions_is_rejected(self):
+        unsafe_path = Path(self.temp.name) / "unsafe.sqlite3"
+        unsafe_path.write_bytes(b"not a real database")
+        unsafe_path.chmod(0o644)
+        with self.assertRaises(ValueError):
+            SQLiteControlPlane(unsafe_path, monthly_budget=1)
+
+    def test_database_directory_with_broad_permissions_is_rejected(self):
+        unsafe_dir = Path(self.temp.name) / "public-dir"
+        unsafe_dir.mkdir(mode=0o755)
+        unsafe_dir.chmod(0o755)
+        with self.assertRaises(ValueError):
+            SQLiteControlPlane(unsafe_dir / "store.sqlite3", monthly_budget=1)
 
 
 if __name__ == "__main__":
