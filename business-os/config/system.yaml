@@ -1,0 +1,78 @@
+# Business OS intended configuration. Values are placeholders, not active credentials.
+system:
+  name: business-os
+  mode: guarded
+  deployment_state: blueprint
+  timezone: America/Toronto
+  default_deny: true
+
+portfolio:
+  primary: norevyo
+  units:
+    norevyo:
+      priority: 1
+      production_access: denied
+    automation_services:
+      priority: 2
+      outbound_send: approval_required
+    digital_products:
+      priority: 3
+      publish_and_checkout: approval_required
+  max_active_build_bets: 1
+  max_active_experiments: 2
+
+runtime:
+  provider: undecided
+  environment: isolated_nonproduction
+  always_on_worker_required: true
+  concurrency: 1
+  task_timeout_seconds: 900
+  max_retries: 2
+  require_idempotency_for_writes: true
+
+models:
+  strategic_reasoning: configure_after_provider_selection
+  fast_classification: optional_local_or_low_cost_model
+  local_qwen_small_model_role: routing_and_classification_only
+  fallback: disabled_until_tested
+
+storage:
+  database: new_business_os_database_only
+  region: choose_after_data_residency_review
+  object_store: private
+  backups: encrypted
+  production_database_sharing: false
+
+permissions:
+  public_research: allow
+  internal_drafts: allow
+  sandbox_code_changes: allow
+  create_development_branch: require_project_allowlist
+  send_email: approval_required
+  publish_content: approval_required
+  contact_prospects: approval_required
+  advertising_spend: approval_required
+  purchases_and_subscriptions: approval_required
+  payments_and_refunds: prohibited
+  production_deployments: prohibited
+  production_data_mutations: prohibited
+  main_branch_merge: prohibited
+
+budgets:
+  monthly_limit_usd: SET_BEFORE_ACTIVATION
+  per_task_limit_usd: SET_BEFORE_ACTIVATION
+  alert_percentages: [50, 75, 90]
+  hard_stop_at_limit: true
+  automatic_budget_increase: false
+
+scheduling:
+  enabled: false
+  daily_brief: proposed_not_active
+  weekly_portfolio_review: proposed_not_active
+
+observability:
+  structured_logs: required
+  task_cost_tracking: required
+  audit_events: required
+  global_pause_switch: required
+  secret_redaction: required
