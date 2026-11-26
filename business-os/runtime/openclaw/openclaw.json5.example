@@ -4,7 +4,7 @@
 // payment, publishing or production integrations are configured here.
 {
   tools: {
-    profile: "minimal",
+    profile: "coding",
     gatewayPolicy: {
       allow: [
         "read",
