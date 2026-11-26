@@ -39,24 +39,20 @@ if [[ "$DEST_ROOT" != /* ]]; then
   echo "Workspace root must be an absolute path: $DEST_ROOT" >&2
   exit 1
 fi
-if [[ "$DEST_ROOT" == "/" || "$DEST_ROOT" == "$HOME" ]]; then
-  echo "Refusing unsafe workspace root: $DEST_ROOT" >&2
-  exit 1
-fi
-if [[ -L "$HOME/.openclaw" ]]; then
-  echo "Refusing symlinked OpenClaw directory: $HOME/.openclaw" >&2
-  exit 1
-fi
 python3 - "$DEST_ROOT" <<'PY'
 import pathlib
 import sys
 
 root = pathlib.Path(sys.argv[1])
+if not root.is_absolute() or ".." in root.parts:
+    raise SystemExit(f"Workspace root must be absolute and contain no '..': {root}")
 current = pathlib.Path(root.anchor)
 for part in root.parts[1:]:
     current = current / part
     if current.is_symlink():
         raise SystemExit(f"Refusing symlink in workspace path: {current}")
+if root.resolve(strict=False) in {pathlib.Path("/"), pathlib.Path.home().resolve()}:
+    raise SystemExit(f"Refusing unsafe workspace root: {root}")
 PY
 
 # Refuse symlinked workspace roots and pre-existing files before any writes.
@@ -70,7 +66,7 @@ for item in "${MAP[@]}"; do
   source_file="${item#*:}"
   src="$SOURCE/$source_file"
   dest="$DEST_ROOT/$id"
-  [[ -f "$src" ]] || { echo "Missing source: $src" >&2; exit 1; }
+  [[ -f "$src" && ! -L "$src" ]] || { echo "Missing or symlinked source: $src" >&2; exit 1; }
   if [[ -L "$dest" ]]; then
     echo "Refusing symlinked agent workspace: $dest" >&2
     exit 1
@@ -99,8 +95,8 @@ for item in "${MAP[@]}"; do
   if [[ "$MODE" == "apply" ]]; then
     mkdir -p "$dest"
     cp -n "$src" "$dest/SOUL.md"
-    cp "$REPO_ROOT/business-os/AUTONOMY.md" "$dest/AUTONOMY.md"
-    cp "$REPO_ROOT/business-os/TASK_CONTRACT.md" "$dest/TASK_CONTRACT.md"
+    cp -n "$REPO_ROOT/business-os/AUTONOMY.md" "$dest/AUTONOMY.md"
+    cp -n "$REPO_ROOT/business-os/TASK_CONTRACT.md" "$dest/TASK_CONTRACT.md"
     (set -o noclobber; cat > "$dest/AGENTS.md" <<'POLICY'
 # Business OS workspace policy
 
