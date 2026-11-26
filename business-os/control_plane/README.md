@@ -38,11 +38,15 @@ Do not point this example at any production database. Use a new, isolated Busine
 
 `independent_verifier.py` defines a separate verifier contract. It requires a verified principal with the internal verifier scope/role, distinct from requester and executor, and fetches exact destination evidence through an injected reader plus authenticator. It checks the approved payload/scope, trusted source, timestamps and evidence hash. Synthetic tests only; no destination connector is deployed. See [Verification contract](../VERIFICATION_CONTRACT.md).
 
+## Cryptographic identity verifier
+
+`auth0_jwt_verifier.py` uses the pinned `PyJWT[crypto]==2.15.1` dependency in `requirements-auth.txt` to validate issuer-pinned Auth0 RS256/JWKS tokens using the RFC 9068 `at+jwt` profile. It derives the JWKS endpoint from a trusted HTTPS issuer and requires `iss`, `sub`, `aud`, `exp`, `iat`, `jti` and `client_id`. The tests use generated RSA keys and an injected offline JWKS key; they do not contact Auth0. The verifier is not a live tenant integration or an HTTP API.
+
 ## Identity boundary
 
 `identity_boundary.py` validates a bounded Bearer header using an injected cryptographic token-verifier callback, pins issuer/audience, checks token time claims, and returns a minimal immutable principal with scopes and roles filtered through a fixed Business OS allowlist. Unknown scopes/roles are discarded, and API contract tests verify that every declared route permission exists in that allowlist. `human_approver_identity_verifier` can be passed as the approval authority's identity callback; it requires the verified principal subject to match and both the human-approver role and approval-decision scope.
 
-This is not an OIDC/JWT implementation or an HTTP API. The injected verifier must perform signature, algorithm, trusted JWKS/key-rotation and revocation checks. The current tests use synthetic verifier callbacks only. See [Identity and API boundary](../IDENTITY_AND_API_BOUNDARY.md) for the middleware contract and production gates.
+This is not an HTTP API or a deployed identity service. `auth0_jwt_verifier.py` provides a concrete RS256 verifier component, but production use still requires a provisioned tenant, live JWKS/rotation and revocation tests, secure configuration/secret handling, a hash-locked dependency set and server-side route middleware. The identity unit tests also retain synthetic callback seams. See [Identity and API boundary](../IDENTITY_AND_API_BOUNDARY.md) for the middleware contract and production gates.
 
 ## Signed one-use approval grant prototype
 
