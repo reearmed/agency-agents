@@ -8,8 +8,10 @@ import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
-from approval_grants import SQLiteGrantLedger
+from approval_grants import ApprovalGrantAuthority, SQLiteGrantLedger
 from cli import main
+from durable_execution import DurableMockExecutionGateway, SQLiteMockAdapter
+from execution_gateway import MockOutcomeVerifier
 
 
 class LocalLedgerCliTests(unittest.TestCase):
@@ -75,6 +77,40 @@ class LocalLedgerCliTests(unittest.TestCase):
         self.assertTrue(json.loads(output)["kill_switch_active"])
         with self.assertRaises(SystemExit):
             main(["clear-kill-switch", "--db", str(db)])
+
+    def test_intents_cli_lists_safe_summaries_without_operation_payload(self):
+        db = self.root / "ledger.sqlite3"
+        ledger = SQLiteGrantLedger(db)
+        authority = ApprovalGrantAuthority(
+            signing_key=b"cli-test-signing-key-material-32-bytes",
+            ledger=ledger,
+            identity_verifier=lambda actor, context: context == "trusted",
+        )
+        gateway = DurableMockExecutionGateway(
+            authority=authority,
+            ledger=ledger,
+            adapter=SQLiteMockAdapter(ledger),
+            verifier=MockOutcomeVerifier(),
+            kill_switch_check=lambda: False,
+        )
+        payload = {"operation": "private-synthetic-payload"}
+        token = authority.issue(
+            task_id="cli-task-0001", payload=payload, adapter="mock",
+            action="create", target="isolated-target", idempotency_key="cli-idem-0001",
+            requester_id="agent", approver_id="human", auth_context="trusted",
+        )
+        gateway.submit(
+            token, task_id="cli-task-0001", payload=payload, adapter_name="mock",
+            action="create", target="isolated-target", idempotency_key="cli-idem-0001",
+            requester_id="agent",
+        )
+        code, output, _ = self.run_cli("intents", "--db", str(db), "--state", "VERIFY_PENDING")
+        self.assertEqual(code, 0)
+        result = json.loads(output)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["task_id"], "cli-task-0001")
+        self.assertNotIn("operation_json", result[0])
+        self.assertNotIn("private-synthetic-payload", output)
 
     def test_backup_cli_creates_private_verified_backup(self):
         db = self.root / "ledger.sqlite3"
