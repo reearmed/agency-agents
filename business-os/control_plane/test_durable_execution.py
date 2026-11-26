@@ -179,6 +179,17 @@ class DurableExecutionTests(unittest.TestCase):
             adapter.execute(idempotency_key="blocked-key", operation={"amount": 1})
         self.assertIsNone(self.ledger.lookup_mock_destination_receipt("blocked-key"))
 
+    def test_durable_destination_idempotent_replay_returns_original_receipt(self):
+        from durable_execution import SQLiteMockAdapter
+        adapter = SQLiteMockAdapter(self.ledger)
+        first = adapter.execute(idempotency_key="stable-key", operation={"amount": 1})
+        second = adapter.execute(idempotency_key="stable-key", operation={"amount": 1})
+        self.assertEqual(first, second)
+        self.assertEqual(
+            self.ledger.lookup_mock_destination_receipt("stable-key")["operation_sha256"],
+            first.operation_sha256,
+        )
+
     def test_persistent_destination_rejects_idempotency_key_payload_swap(self):
         from durable_execution import SQLiteMockAdapter
         adapter = SQLiteMockAdapter(self.ledger)
