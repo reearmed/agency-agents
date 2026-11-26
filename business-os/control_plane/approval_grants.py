@@ -804,6 +804,12 @@ class SQLiteGrantLedger:
             ).fetchone()
             if switch and switch["value"] == "true":
                 raise GrantError("persistent kill switch active at mock destination")
+            intent = conn.execute(
+                "SELECT * FROM execution_intents WHERE idempotency_key=?",
+                (idempotency_key,),
+            ).fetchone()
+            if not intent or intent["operation_sha256"] != digest:
+                raise GrantError("mock destination request is not bound to an approved execution intent")
             row = conn.execute(
                 "SELECT * FROM mock_destination_receipts WHERE idempotency_key=?",
                 (idempotency_key,),
@@ -811,8 +817,12 @@ class SQLiteGrantLedger:
             if row:
                 if row["operation_sha256"] != digest:
                     raise GrantError("mock destination idempotency key reused for different operation")
+                if intent["state"] in {"READY", "FAILED"}:
+                    raise GrantError("existing destination receipt conflicts with execution intent state")
                 conn.commit()
                 return dict(row)
+            if intent["state"] != "DISPATCHING":
+                raise GrantError("new mock destination receipt requires a claimed execution intent")
             conn.execute(
                 """INSERT INTO mock_destination_receipts
                    (idempotency_key, operation_sha256, result, created_at)
