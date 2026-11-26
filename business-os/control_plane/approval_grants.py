@@ -182,7 +182,12 @@ class SQLiteGrantLedger:
         for row in rows:
             if row["previous_hash"] != previous:
                 return False
-            details = json.loads(row["details_json"])
+            try:
+                details = json.loads(row["details_json"])
+            except (TypeError, json.JSONDecodeError):
+                return False
+            if not isinstance(details, dict):
+                return False
             expected = hashlib.sha256(canonical_json({
                 "intent_id": row["intent_id"], "event": row["event"],
                 "details": details, "previous_hash": previous,
@@ -208,9 +213,12 @@ class SQLiteGrantLedger:
             if event["intent_id"] in created:
                 return False
             try:
-                created[event["intent_id"]] = json.loads(event["details_json"])
+                details = json.loads(event["details_json"])
             except (TypeError, json.JSONDecodeError):
                 return False
+            if not isinstance(details, dict):
+                return False
+            created[event["intent_id"]] = details
         if len(created) != len(intents):
             return False
         for intent in intents:
