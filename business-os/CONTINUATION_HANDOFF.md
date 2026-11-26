@@ -10,14 +10,15 @@
 
 Read this file first, then read:
 1. `business-os/README.md`
-2. `business-os/IMPLEMENTATION_BACKLOG.md`
-3. `business-os/ACTIVATION_BLOCKERS.md`
-4. `business-os/CONTROL_PLANE_SPEC.md`
-5. `business-os/EXECUTION_PROTOCOL.md`
-6. `business-os/TESTS_AND_ACCEPTANCE.md`
-7. `business-os/DEPLOYMENT_RUNBOOK.md`
-8. `business-os/runtime/openclaw/OPERATIONS.md`
-9. `business-os/runtime/HOSTING_DECISION.md`
+2. `business-os/control_plane/README.md`
+3. `business-os/IMPLEMENTATION_BACKLOG.md`
+4. `business-os/ACTIVATION_BLOCKERS.md`
+5. `business-os/CONTROL_PLANE_SPEC.md`
+6. `business-os/EXECUTION_PROTOCOL.md`
+7. `business-os/TESTS_AND_ACCEPTANCE.md`
+8. `business-os/DEPLOYMENT_RUNBOOK.md`
+9. `business-os/runtime/openclaw/OPERATIONS.md`
+10. `business-os/runtime/HOSTING_DECISION.md`
 
 Then inspect the actual current branch and repository state before making changes. Do not assume this handoff is more current than GitHub.
 
