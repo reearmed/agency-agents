@@ -118,6 +118,17 @@ class DurableExecutionTests(unittest.TestCase):
         self.assertEqual(self.ledger.get_intent(intent_id)["state"], "UNKNOWN")
         self.assertEqual(self.adapter.call_count, 1)
 
+    def test_one_task_cannot_create_two_distinct_execution_intents(self):
+        self.submit()
+        second_token = self.issue(task_id="task-1", key="idem-2")
+        with self.assertRaises(DurableExecutionError):
+            self.gateway.submit(
+                second_token, task_id="task-1", payload=self.payload, adapter_name="mock",
+                action="create", target="sandbox-object", idempotency_key="idem-2",
+                requester_id="agent-1",
+            )
+        self.assertEqual(self.adapter.call_count, 1)
+
     def test_duplicate_intent_idempotency_key_rejected(self):
         first = self.submit()
         second_token = self.issue(task_id="task-2", key="idem-1")
