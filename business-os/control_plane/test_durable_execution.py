@@ -113,8 +113,8 @@ class DurableExecutionTests(unittest.TestCase):
             conn.commit()
         finally:
             conn.close()
-        with self.assertRaises(GrantError):
-            self.ledger.claim_intent(intent_id, "second-worker", lease_seconds=1)
+        reconcilable = self.gateway.recover_expired_dispatches()
+        self.assertEqual(len(reconcilable), 1)
         self.assertEqual(self.ledger.get_intent(intent_id)["state"], "UNKNOWN")
         self.assertEqual(self.adapter.call_count, 1)
 
