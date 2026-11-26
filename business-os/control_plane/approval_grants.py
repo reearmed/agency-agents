@@ -411,6 +411,45 @@ class SQLiteGrantLedger:
         finally:
             conn.close()
 
+    def recover_stale_dispatches(self, now: datetime | None = None) -> int:
+        """Move expired DISPATCHING leases to UNKNOWN; never put them back in READY."""
+        current = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+        conn = self._connect()
+        recovered = 0
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            rows = conn.execute(
+                """SELECT intent_id, lease_owner, lease_expires_at FROM execution_intents
+                   WHERE state='DISPATCHING' AND lease_expires_at IS NOT NULL"""
+            ).fetchall()
+            for row in rows:
+                try:
+                    expiry = datetime.fromisoformat(row["lease_expires_at"])
+                except (TypeError, ValueError):
+                    expiry = current - timedelta(seconds=1)
+                if expiry.tzinfo is None or expiry <= current:
+                    cur = conn.execute(
+                        """UPDATE execution_intents SET state='UNKNOWN', lease_owner=NULL,
+                           lease_expires_at=NULL,
+                           last_error='worker lease expired; destination reconciliation required',
+                           updated_at=? WHERE intent_id=? AND state='DISPATCHING'""",
+                        (current.isoformat(), row["intent_id"]),
+                    )
+                    if cur.rowcount == 1:
+                        self._append_execution_event(
+                            conn, row["intent_id"], "dispatch_lease_expired",
+                            worker_id=row["lease_owner"],
+                        )
+                        recovered += 1
+            conn.commit()
+            return recovered
+        except Exception:
+            if conn.in_transaction:
+                conn.rollback()
+            raise
+        finally:
+            conn.close()
+
     def list_ready_intents(self) -> list[Mapping[str, Any]]:
         conn = self._connect()
         try:
