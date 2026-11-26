@@ -55,6 +55,12 @@ class ApprovalTests(unittest.TestCase):
         with self.assertRaises(ApprovalError):
             self.approve(payload={**self.payload, "body": "Changed after approval"})
 
+    def test_forged_approval_for_replacement_payload_is_rejected(self):
+        replacement = {**self.payload, "body": "Replacement payload"}
+        forged = approval_for(self.task, payload_sha256(replacement))
+        with self.assertRaises(ApprovalError):
+            self.approve(approval=forged, payload=replacement)
+
     def test_recipient_swap_is_rejected(self):
         with self.assertRaises(ApprovalError):
             self.approve(scope={**self.scope, "target": "attacker@example.invalid"})
@@ -90,6 +96,32 @@ class OperationalGuardTests(unittest.TestCase):
         cp.propose("task-000001", {})
         with self.assertRaises(StateError):
             cp.transition("task-000001", TaskState.APPROVED)
+
+    def test_terminal_success_requires_independent_verification(self):
+        cp = InMemoryControlPlane(10)
+        cp.propose("task-000001", {})
+        with self.assertRaises(StateError):
+            cp.transition("task-000001", TaskState.SUCCEEDED)
+
+    def test_unknown_adapter_outcome_can_be_reconciled_only_with_evidence(self):
+        cp = InMemoryControlPlane(10)
+        payload = {"operation": "synthetic"}
+        digest = cp.propose("task-000001", payload)
+        approval = approval_for("task-000001", digest)
+        cp.approve(task_id="task-000001", payload=payload, approval=approval,
+                   expected_scope={"adapter": "email", "action": "send",
+                                   "target": "recipient@example.invalid"},
+                   human_approver=True,
+                   now=datetime(2026, 11, 26, 12, 5, tzinfo=timezone.utc))
+        cp.transition("task-000001", TaskState.EXECUTING)
+        cp.transition("task-000001", TaskState.UNKNOWN)
+        with self.assertRaises(StateError):
+            cp.record_verified_outcome("task-000001", TaskState.SUCCEEDED,
+                                       verifier_id="verifier-1", evidence_sha256="invalid")
+        cp.record_verified_outcome("task-000001", TaskState.SUCCEEDED,
+                                   verifier_id="independent-verifier",
+                                   evidence_sha256="b" * 64)
+        self.assertEqual(cp.states["task-000001"], TaskState.SUCCEEDED)
 
     def test_kill_switch_blocks_budget_and_approval(self):
         cp = InMemoryControlPlane(10)
