@@ -55,7 +55,7 @@ scope are validated before the ledger atomically inserts both the consumed
 grant and immutable execution intent in one `BEGIN IMMEDIATE` transaction.
 The intent includes canonical operation JSON and SHA-256.
 
-The ledger also has a persistent fail-closed kill switch: it blocks grant+intent creation and new worker claims, and remains engaged if its audit write fails. The worker claims a READY intent with a bounded lease. If a process crashes
+The ledger also has a persistent fail-closed kill switch: it blocks new approval grants, grant+intent creation, worker claims and synthetic destination acceptance, and remains engaged if its audit write fails. The durable worker checks the caller-supplied kill-switch callback before and after claiming work. The worker claims a READY intent with a bounded lease. If a process crashes
 before claiming it, another worker can recover READY work. Once claimed, a
 dispatch is never automatically repeated. A timeout or exception becomes
 UNKNOWN; an expired dispatch lease also becomes UNKNOWN. Both require
@@ -63,11 +63,13 @@ destination lookup and separate verifier reconciliation. Successful mock
 dispatches enter VERIFY_PENDING until reconciliation. Intent transitions
 are recorded in an append-only hash-chained event table.
 
-The gateway accepts only the exact `MockAdapter` and
-`MockOutcomeVerifier` classes. No real adapter is supported. This closes
-the earlier crash gap between consuming a grant and persisting the intent,
-but it does not make a remote side effect exactly-once: a real destination
-must provide durable idempotency and authoritative lookup semantics.
+The durable gateway accepts only the exact `SQLiteMockAdapter` and
+`MockOutcomeVerifier` classes. The synthetic destination stores immutable
+receipts in SQLite, enforces idempotency-key/payload matching, and checks the
+persistent kill switch at the destination boundary. This supports tests across
+gateway restarts, but it does not make a remote side effect exactly-once: a
+real destination must provide durable idempotency and authoritative lookup
+semantics. The older `execution_gateway.py` remains an in-memory test harness.
 
 ## Important limitations
 
