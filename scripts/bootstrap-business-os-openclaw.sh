@@ -39,7 +39,7 @@ for item in "${MAP[@]}"; do
   dest="$DEST_ROOT/$id"
   [[ -f "$src" ]] || { echo "Missing source: $src" >&2; exit 1; }
 
-  for name in SOUL.md AGENTS.md IDENTITY.md; do
+  for name in SOUL.md AGENTS.md IDENTITY.md AUTONOMY.md TASK_CONTRACT.md; do
     target="$dest/$name"
     if [[ -e "$target" ]]; then
       echo "Refusing to overwrite existing file: $target" >&2
@@ -62,10 +62,12 @@ for item in "${MAP[@]}"; do
   if [[ "$MODE" == "apply" ]]; then
     mkdir -p "$dest"
     cp "$src" "$dest/SOUL.md"
+    cp "$REPO_ROOT/business-os/AUTONOMY.md" "$dest/AUTONOMY.md"
+    cp "$REPO_ROOT/business-os/TASK_CONTRACT.md" "$dest/TASK_CONTRACT.md"
     cat > "$dest/AGENTS.md" <<'POLICY'
 # Business OS workspace policy
 
-- Follow the role instructions in SOUL.md and the Business OS policies in the checked-out repository.
+- Follow SOUL.md, AUTONOMY.md and TASK_CONTRACT.md in this workspace.
 - Default deny. If authorization, source provenance, privacy classification or approval is unclear, stop and escalate.
 - Never send messages, publish, spend, purchase, transact, change production, merge to main or expose secrets.
 - Do not use shell, process execution, browser control or unapproved integrations.
