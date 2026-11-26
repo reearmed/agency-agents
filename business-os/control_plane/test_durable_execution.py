@@ -424,6 +424,25 @@ class DurableExecutionTests(unittest.TestCase):
         self.assertEqual(self.ledger.budget_usage("2026-11")["used_minor"], 700)
         self.assertEqual(self.adapter.call_count, 1)
 
+    def test_budget_reservation_amount_is_bound_to_signed_payload(self):
+        original = {
+            **self.payload,
+            "_budget": {"reservation_id": "res-bound", "amount_minor": 300, "currency": "USD", "period": "2026-11"},
+        }
+        changed = {
+            **self.payload,
+            "_budget": {"reservation_id": "res-bound", "amount_minor": 301, "currency": "USD", "period": "2026-11"},
+        }
+        token = self.issue(payload=original, task_id="budget-bound", key="budget-bound-key")
+        with self.assertRaises(DurableExecutionError):
+            self.gateway.submit(
+                token, task_id="budget-bound", payload=changed, adapter_name="mock",
+                action="create", target="sandbox-object", idempotency_key="budget-bound-key",
+                requester_id="agent-1",
+            )
+        self.assertEqual(self.adapter.call_count, 0)
+        self.assertIsNone(self.ledger.get_intent(self.gateway._grant_id_from_token(token)))
+
     def test_missing_budget_configuration_and_per_task_overage_fail_closed(self):
         payload = {
             **self.payload,
