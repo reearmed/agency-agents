@@ -335,6 +335,7 @@ class DurableExecutionTests(unittest.TestCase):
             action="create", target="sandbox-object", idempotency_key="budget-idem-1",
             requester_id="agent-1",
         )
+        self.assertEqual(self.gateway.reconcile(result["intent_id"])["state"], "SUCCEEDED")
         usage = self.ledger.budget_usage("2026-11")
         self.assertEqual(usage["reserved_minor"], 700)
         self.assertEqual(usage["remaining_minor"], 300)
@@ -449,11 +450,12 @@ class DurableExecutionTests(unittest.TestCase):
             "_budget": {"reservation_id": "res-settle", "amount_minor": 300, "currency": "USD", "period": "2026-11"},
         }
         token = self.issue(payload=payload, task_id="budget-settle", key="budget-settle-key")
-        self.gateway.submit(
+        result = self.gateway.submit(
             token, task_id="budget-settle", payload=payload, adapter_name="mock",
             action="create", target="sandbox-object", idempotency_key="budget-settle-key",
             requester_id="agent-1",
         )
+        self.gateway.reconcile(result["intent_id"])
         with self.assertRaises(GrantError):
             self.ledger.settle_budget("budget-settle", 301)
         self.assertEqual(self.ledger.get_budget_reservation("budget-settle")["state"], "RESERVED")
