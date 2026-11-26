@@ -170,6 +170,14 @@ class SQLiteControlPlaneTests(unittest.TestCase):
             conn.close()
         self.assertFalse(self.cp.verify_audit_chain())
 
+    def test_database_path_rejects_symlinked_parent_directory(self):
+        real_parent = Path(self.temp.name) / "real-parent"
+        real_parent.mkdir(mode=0o700)
+        alias = Path(self.temp.name) / "parent-alias"
+        alias.symlink_to(real_parent, target_is_directory=True)
+        with self.assertRaises(ValueError):
+            SQLiteControlPlane(alias / "store.sqlite3", monthly_budget=1)
+
     def test_database_path_must_be_persistent_and_absolute(self):
         with self.assertRaises(ValueError):
             SQLiteControlPlane(":memory:", monthly_budget=1)
