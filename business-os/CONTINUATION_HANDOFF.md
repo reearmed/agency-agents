@@ -3,7 +3,7 @@
 **Last updated:** 26 November 2026  
 **Repository:** https://github.com/reearmed/agency-agents  
 **Working branch:** `business-os/blueprint`  
-**Current branch head:** `3319da648af84ab29f2b92948f3aafea11c63fb0`  
+**Current branch head:** `12fd2b512134cd823f26962aad0a2a9748b96297`  
 **Base branch:** `main`  
 **Status:** guarded architecture, nine agent definitions, local mock-only control plane, durable SQLite outbox/budget prototype, strict identity boundary component, CI and synthetic tests. **Not deployed, not running, and not connected to external actions.**
 
@@ -53,13 +53,13 @@ Autonomy is guarded. Internal research, analysis, code, drafts and synthetic tes
 
 - Fork: `reearmed/agency-agents`.
 - Branch: `business-os/blueprint`.
-- Exact branch head: `3319da648af84ab29f2b92948f3aafea11c63fb0`.
-- Compare against `main`: **317 commits ahead, 2 behind, 68 changed paths**.
+- Exact branch head: `12fd2b512134cd823f26962aad0a2a9748b96297`.
+- Compare against `main`: **321 commits ahead, 2 behind, 69 changed paths**.
 - The two commits behind are the previously disclosed handoff add/delete correction pair. Do not rebase, force-push, rewrite history or merge to resolve this without explicit approval.
 - The 68 changed paths are confined to `business-os/`, `scripts/bootstrap-business-os-openclaw.sh`, `scripts/test-bootstrap-business-os-openclaw.sh`, and `.github/workflows/business-os-safety-tests.yml`.
 - No open pull requests were returned in the latest check.
-- Latest CI: [run 45885179931](https://github.com/reearmed/agency-agents/actions/runs/45885179931), completed successfully on the current head.
-- Latest CI evidence: six JSON Schema fixtures, **136 Python unit tests**, JSON/YAML/JSON5 config checks, OpenClaw policy assertions, bootstrap safety harness and budget-enabled synthetic durable E2E all passed.
+- Latest CI: [run 45885385292](https://github.com/reearmed/agency-agents/actions/runs/45885385292), completed successfully on the current head.
+- Latest CI evidence: six JSON Schema fixtures, **139 Python unit tests**, JSON/YAML/JSON5 config checks, OpenClaw policy assertions, bootstrap safety harness and budget-enabled synthetic durable E2E all passed.
 - No PR was created, no merge/rebase was performed, no production deployment occurred and no infrastructure was provisioned.
 
 ## Implemented repository deliverables
@@ -93,13 +93,13 @@ Autonomy is guarded. Internal research, analysis, code, drafts and synthetic tes
 - Produces a minimal immutable principal without retaining the bearer token.
 - `human_approver_identity_verifier` is a callback for the existing approval authority. It requires the verified subject to match the approver ID and requires both `business-os:approval:decide` scope and `business-os:human-approver` role.
 - `durable_execution.py` now bounds and strictly parses the untrusted grant ID routing hint before the approval authority independently verifies the HMAC, schema, expiry and exact scope.
-- These are local components and test seams, not a production IdP, cryptographic JWT verifier, authenticated API or HTTP service. Synthetic tests do not prove production identity.
+- An integration test now proves the verified human-principal callback works with `ApprovalGrantAuthority.issue`, and rejects a wrong subject or a principal lacking the human role/scope. These are local components and test seams, not a production IdP, cryptographic JWT verifier, authenticated API or HTTP service. Synthetic tests do not prove production identity.
 
 ### CI and test evidence
 - Workflow: `.github/workflows/business-os-safety-tests.yml`.
-- Latest successful run: [45885179931](https://github.com/reearmed/agency-agents/actions/runs/45885179931).
-- Hosted CI passed **136 Python unit tests**, six JSON Schema fixtures, JSON/YAML/JSON5 parsing, OpenClaw config policy assertions, synthetic bootstrap safety checks and budget-enabled durable E2E.
-- The latest run included strict token-parser tests and identity-boundary tests.
+- Latest successful run: [45885385292](https://github.com/reearmed/agency-agents/actions/runs/45885385292).
+- Hosted CI passed **139 Python unit tests**, six JSON Schema fixtures, JSON/YAML/JSON5 parsing, OpenClaw config policy assertions, synthetic bootstrap safety checks and budget-enabled durable E2E.
+- The latest run included strict token-parser tests, identity-boundary tests and end-to-end identity-to-approval integration tests.
 - No local Mac test has been performed. The bootstrap helper has not been applied to the user's Mac.
 
 ## Runtime, data and budget status
