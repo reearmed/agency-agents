@@ -1005,6 +1005,8 @@ class ApprovalGrantAuthority:
                 "action": action,
                 "target": target,
             }
+            if "_budget" in payload:
+                expected_intent["budget_reservation"] = payload["_budget"]
             if dict(execution_intent) != expected_intent:
                 raise GrantError("execution intent does not match verified approval scope")
             self._ledger.consume_with_intent(grant["grant_id"], grant_digest, expected_intent)
