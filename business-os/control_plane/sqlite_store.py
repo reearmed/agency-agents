@@ -13,9 +13,11 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import re
 import sqlite3
+import stat
 from typing import Any, Iterator, Mapping
 
 from guardrails import (
@@ -41,12 +43,23 @@ class SQLiteControlPlane:
     def __init__(self, db_path: str | Path, monthly_budget: float):
         if not math.isfinite(monthly_budget) or monthly_budget < 0:
             raise ValueError("monthly_budget must be finite and non-negative")
-        if str(db_path) == ":memory:" or not Path(db_path).is_absolute():
+        database = Path(db_path)
+        if str(db_path) == ":memory:" or not database.is_absolute():
             raise ValueError("db_path must be a persistent absolute filesystem path")
-        self.db_path = str(db_path)
+        if database.is_symlink():
+            raise ValueError("database path must not be a symlink")
+        parent = database.parent
+        parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        if stat.S_IMODE(parent.stat().st_mode) & 0o077:
+            raise ValueError("database directory must be private (0700 or stricter)")
+        existed = database.exists()
+        if existed and (not database.is_file() or stat.S_IMODE(database.stat().st_mode) & 0o077):
+            raise ValueError("existing database file must be regular and private (0600 or stricter)")
+        self.db_path = str(database)
         self.monthly_budget = float(monthly_budget)
-        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         self._initialize()
+        if not existed:
+            os.chmod(self.db_path, 0o600)
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path, timeout=10, isolation_level=None)
