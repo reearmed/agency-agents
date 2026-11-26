@@ -44,7 +44,7 @@ rotation, revocation service, network API or adapter. A caller-supplied
 callback is only a seam for future integration; do not wire it to an agent
 claim or a boolean request field. The signing key must be generated and
 managed outside Git using a secrets manager. The local ledger is not a
-distributed one-use grant service.
+distributed one-use grant service; privileged database operators can still alter the file or remove triggers.
 
 ## Important limitations
 
