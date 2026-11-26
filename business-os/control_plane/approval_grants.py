@@ -400,6 +400,11 @@ class SQLiteGrantLedger:
         conn = self._connect()
         try:
             conn.execute("BEGIN IMMEDIATE")
+            switch = conn.execute(
+                "SELECT value FROM control_state WHERE key='kill_switch'"
+            ).fetchone()
+            if switch and switch["value"] == "true":
+                raise GrantError("persistent kill switch active at mock destination")
             row = conn.execute(
                 "SELECT * FROM mock_destination_receipts WHERE idempotency_key=?",
                 (idempotency_key,),
