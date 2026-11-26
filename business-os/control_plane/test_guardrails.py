@@ -2,7 +2,7 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
-from guardrails import (Approval, ApprovalError, AuditError, BudgetError,
+from guardrails import (Approval, ApprovalError, AuditError, BudgetError, GuardrailError,
                         InMemoryControlPlane, StateError, TaskState, canonical_json,
                         payload_sha256)
 
@@ -148,6 +148,19 @@ class OperationalGuardTests(unittest.TestCase):
         with self.assertRaises(BudgetError):
             cp.reserve_budget("task-000002", 2)
 
+    def test_concurrent_budget_reservations_never_exceed_cap(self):
+        cp = InMemoryControlPlane(10)
+        def reserve(index):
+            try:
+                cp.reserve_budget(f"task-{index:06d}", 1)
+                return True
+            except BudgetError:
+                return False
+        with ThreadPoolExecutor(max_workers=20) as pool:
+            results = list(pool.map(reserve, range(40)))
+        self.assertEqual(sum(results), 10)
+        self.assertEqual(cp.spent, 10)
+
     def test_audit_failure_fails_closed(self):
         cp = InMemoryControlPlane(5, audit_available=False)
         with self.assertRaises(AuditError):
@@ -169,10 +182,15 @@ class OperationalGuardTests(unittest.TestCase):
             results = list(pool.map(lambda _: cp.claim_idempotency("same-key-123456", "task-000001"), range(50)))
         self.assertEqual(sum(results), 1)
 
+    def test_repeated_idempotency_claim_for_same_task_is_a_noop(self):
+        cp = InMemoryControlPlane(5)
+        self.assertTrue(cp.claim_idempotency("same-key-123456", "task-000001"))
+        self.assertFalse(cp.claim_idempotency("same-key-123456", "task-000001"))
+
     def test_idempotency_key_cannot_be_reassigned(self):
         cp = InMemoryControlPlane(5)
         cp.claim_idempotency("same-key-123456", "task-000001")
-        with self.assertRaises(Exception):
+        with self.assertRaises(GuardrailError):
             cp.claim_idempotency("same-key-123456", "task-000002")
 
 
