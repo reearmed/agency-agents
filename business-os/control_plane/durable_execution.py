@@ -86,6 +86,8 @@ class DurableMockExecutionGateway:
             "action": action,
             "target": target,
         }
+        if "_budget" in payload:
+            intent["budget_reservation"] = payload["_budget"]
         try:
             self.authority.verify_and_consume(
                 token, task_id=task_id, payload=payload, adapter=adapter_name,
