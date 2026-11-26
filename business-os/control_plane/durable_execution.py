@@ -154,7 +154,16 @@ class DurableMockExecutionGateway:
     def recover_ready(self, *, worker_id: str) -> list[Mapping[str, Any]]:
         recovered = []
         for intent in self.ledger.list_ready_intents():
-            recovered.append(self.dispatch_ready(intent["intent_id"], worker_id=worker_id))
+            try:
+                recovered.append(self.dispatch_ready(intent["intent_id"], worker_id=worker_id))
+            except DurableExecutionError:
+                current = self.ledger.get_intent(intent["intent_id"])
+                # Another worker may have won the atomic claim. Skip only when
+                # the intent is no longer READY; otherwise preserve fail-closed
+                # behavior for kill-switch or infrastructure failures.
+                if current is not None and current["state"] != "READY":
+                    continue
+                raise
         return recovered
 
     def reconcile(self, intent_id: str) -> Mapping[str, Any]:
