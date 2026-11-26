@@ -417,6 +417,77 @@ class DurableExecutionTests(unittest.TestCase):
         self.assertEqual(self.ledger.budget_usage("2026-11")["used_minor"], 0)
         self.assertEqual(self.adapter.call_count, 0)
 
+    def test_budget_configuration_and_reservation_scope_are_immutable(self):
+        self.ledger.configure_budget(
+            period="2026-11", monthly_limit_minor=1000,
+            per_task_limit_minor=500, currency="USD",
+        )
+        payload = {
+            **self.payload,
+            "_budget": {"reservation_id": "res-immutable", "amount_minor": 300, "currency": "USD", "period": "2026-11"},
+        }
+        token = self.issue(payload=payload, task_id="budget-immutable", key="budget-immutable-key")
+        self.gateway.submit(
+            token, task_id="budget-immutable", payload=payload, adapter_name="mock",
+            action="create", target="sandbox-object", idempotency_key="budget-immutable-key",
+            requester_id="agent-1",
+        )
+        conn = sqlite3.connect(self.db)
+        try:
+            with self.assertRaises(sqlite3.IntegrityError):
+                conn.execute(
+                    "UPDATE execution_budget_limits SET monthly_limit_minor=9999 WHERE period='2026-11'"
+                )
+            with self.assertRaises(sqlite3.IntegrityError):
+                conn.execute(
+                    "UPDATE execution_budget_reservations SET amount_minor=9999 WHERE task_id='budget-immutable'"
+                )
+        finally:
+            conn.close()
+        self.assertTrue(self.ledger.verify_execution_integrity())
+
+    def test_privileged_budget_limit_tampering_is_detected(self):
+        self.ledger.configure_budget(
+            period="2026-11", monthly_limit_minor=1000,
+            per_task_limit_minor=500, currency="USD",
+        )
+        conn = sqlite3.connect(self.db)
+        try:
+            conn.execute("DROP TRIGGER budget_limits_no_update")
+            conn.execute(
+                "UPDATE execution_budget_limits SET monthly_limit_minor=9999 WHERE period='2026-11'"
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        self.assertFalse(self.ledger.verify_execution_integrity())
+
+    def test_privileged_budget_reservation_tampering_is_detected(self):
+        self.ledger.configure_budget(
+            period="2026-11", monthly_limit_minor=1000,
+            per_task_limit_minor=500, currency="USD",
+        )
+        payload = {
+            **self.payload,
+            "_budget": {"reservation_id": "res-tamper", "amount_minor": 300, "currency": "USD", "period": "2026-11"},
+        }
+        token = self.issue(payload=payload, task_id="budget-tamper", key="budget-tamper-key")
+        self.gateway.submit(
+            token, task_id="budget-tamper", payload=payload, adapter_name="mock",
+            action="create", target="sandbox-object", idempotency_key="budget-tamper-key",
+            requester_id="agent-1",
+        )
+        conn = sqlite3.connect(self.db)
+        try:
+            conn.execute("DROP TRIGGER budget_reservations_immutable_fields")
+            conn.execute(
+                "UPDATE execution_budget_reservations SET amount_minor=999 WHERE task_id='budget-tamper'"
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        self.assertFalse(self.ledger.verify_execution_integrity())
+
     def test_budget_release_requires_verified_no_effect(self):
         self.ledger.configure_budget(
             period="2026-11", monthly_limit_minor=1000,
