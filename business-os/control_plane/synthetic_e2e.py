@@ -80,8 +80,13 @@ def main() -> None:
         assert restored.verify_execution_integrity()
 
         restored.activate_kill_switch()
+        restored_authority = ApprovalGrantAuthority(
+            signing_key=b"synthetic-e2e-key-material-32bytes!!",
+            ledger=restored,
+            identity_verifier=lambda actor, context: context == "synthetic-authenticated-session",
+        )
         try:
-            restarted_authority.issue(
+            restored_authority.issue(
                 task_id="paused-task",
                 payload=payload,
                 adapter="mock",
