@@ -47,8 +47,8 @@ class TaskState(str, Enum):
 _ALLOWED_TRANSITIONS = {
     TaskState.PROPOSED: {TaskState.BLOCKED},
     TaskState.APPROVED: {TaskState.EXECUTING, TaskState.BLOCKED},
-    TaskState.EXECUTING: {TaskState.SUCCEEDED, TaskState.FAILED, TaskState.UNKNOWN, TaskState.BLOCKED},
-    TaskState.UNKNOWN: {TaskState.SUCCEEDED, TaskState.FAILED, TaskState.BLOCKED},
+    TaskState.EXECUTING: {TaskState.UNKNOWN, TaskState.BLOCKED},
+    TaskState.UNKNOWN: {TaskState.BLOCKED},
     TaskState.SUCCEEDED: set(), TaskState.BLOCKED: set(), TaskState.FAILED: set(),
 }
 
@@ -108,6 +108,7 @@ class InMemoryControlPlane:
         self.audit_available = audit_available
         self.kill_switch = False
         self.states: dict[str, TaskState] = {}
+        self.task_hashes: dict[str, str] = {}
         self.used_approvals: set[str] = set()
         self.idempotency: dict[str, str] = {}
         self.audit: list[dict[str, Any]] = []
@@ -125,6 +126,7 @@ class InMemoryControlPlane:
             digest = payload_sha256(payload)
             self._record("task_proposed", task_id=task_id, payload_sha256=digest)
             self.states[task_id] = TaskState.PROPOSED
+            self.task_hashes[task_id] = digest
             return digest
 
     def approve(self, *, task_id: str, payload: Mapping[str, Any], approval: Approval,
@@ -137,12 +139,16 @@ class InMemoryControlPlane:
                 raise StateError("task is not awaiting approval")
             if not human_approver:
                 raise ApprovalError("authenticated human approval required")
-            if approval.decision != "approved" or not approval.approver_id:
+            if approval.decision != "approved" or not approval.approver_id or not approval.approval_id:
                 raise ApprovalError("approval missing or rejected")
             if approval.task_id != task_id:
                 raise ApprovalError("approval task mismatch")
-            if approval.payload_sha256 != payload_sha256(payload):
-                raise ApprovalError("approved payload hash mismatch")
+            proposed_hash = self.task_hashes.get(task_id)
+            supplied_hash = payload_sha256(payload)
+            if proposed_hash is None or supplied_hash != proposed_hash:
+                raise ApprovalError("payload differs from the originally proposed task")
+            if approval.payload_sha256 != proposed_hash:
+                raise ApprovalError("approval is not bound to the originally proposed payload")
             if approval.approval_id in self.used_approvals:
                 raise ApprovalError("approval replay detected")
             actual_scope = {"adapter": approval.adapter, "action": approval.action,
@@ -169,6 +175,23 @@ class InMemoryControlPlane:
             self._record("task_state_changed", task_id=task_id,
                          previous=current.value, current=new_state.value)
             self.states[task_id] = new_state
+
+    def record_verified_outcome(self, task_id: str, outcome: TaskState, *,
+                                verifier_id: str, evidence_sha256: str) -> None:
+        """Record a terminal result only when independent verification evidence is supplied."""
+        with self._lock:
+            current = self.states.get(task_id)
+            if current not in {TaskState.EXECUTING, TaskState.UNKNOWN}:
+                raise StateError("task is not awaiting outcome verification")
+            if outcome not in {TaskState.SUCCEEDED, TaskState.FAILED}:
+                raise StateError("verifier outcome must be succeeded or failed")
+            import re
+            if not verifier_id or not re.fullmatch(r"[a-f0-9]{64}", evidence_sha256):
+                raise StateError("independent verifier identity and evidence SHA-256 are required")
+            self._record("task_outcome_verified", task_id=task_id,
+                         previous=current.value, outcome=outcome.value,
+                         verifier_id=verifier_id, evidence_sha256=evidence_sha256)
+            self.states[task_id] = outcome
 
     def reserve_budget(self, task_id: str, amount: float) -> None:
         with self._lock:
