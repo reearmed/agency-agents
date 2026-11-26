@@ -32,17 +32,27 @@ declare -a MAP=(
   "reviewer:08-reality-and-evidence-reviewer.md"
 )
 
+# Refuse symlinked workspace roots so a configured path cannot redirect writes.
+if [[ -L "$HOME/.openclaw" || -L "$DEST_ROOT" ]]; then
+  echo "Refusing symlinked OpenClaw/workspace root: $DEST_ROOT" >&2
+  exit 1
+fi
+
 for item in "${MAP[@]}"; do
   id="${item%%:*}"
   source_file="${item#*:}"
   src="$SOURCE/$source_file"
   dest="$DEST_ROOT/$id"
   [[ -f "$src" ]] || { echo "Missing source: $src" >&2; exit 1; }
+  if [[ -L "$dest" ]]; then
+    echo "Refusing symlinked agent workspace: $dest" >&2
+    exit 1
+  fi
 
   for name in SOUL.md AGENTS.md IDENTITY.md AUTONOMY.md TASK_CONTRACT.md; do
     target="$dest/$name"
-    if [[ -e "$target" ]]; then
-      echo "Refusing to overwrite existing file: $target" >&2
+    if [[ -e "$target" || -L "$target" ]]; then
+      echo "Refusing to overwrite existing file or symlink: $target" >&2
       exit 1
     fi
   done
