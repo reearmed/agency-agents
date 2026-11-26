@@ -34,6 +34,10 @@ Do not point this example at any production database. Use a new, isolated Busine
 
 `../api/openapi.yaml` is the not-yet-deployed OpenAPI 3.1 contract. It defines only proposal, read, internal artifact, approval, budget and kill-switch routes; it has no public execution or adapter endpoint. Static safety tests run in CI. The placeholder server URL is not live.
 
+## Independent verification boundary
+
+`independent_verifier.py` defines a separate verifier contract. It requires a verified principal with the internal verifier scope/role, distinct from requester and executor, and fetches exact destination evidence through an injected reader plus authenticator. It checks the approved payload/scope, trusted source, timestamps and evidence hash. Synthetic tests only; no destination connector is deployed. See [Verification contract](../VERIFICATION_CONTRACT.md).
+
 ## Identity boundary
 
 `identity_boundary.py` validates a bounded Bearer header using an injected cryptographic token-verifier callback, pins issuer/audience, checks token time claims, and returns a minimal immutable principal with scopes and roles filtered through a fixed Business OS allowlist. Unknown scopes/roles are discarded, and API contract tests verify that every declared route permission exists in that allowlist. `human_approver_identity_verifier` can be passed as the approval authority's identity callback; it requires the verified principal subject to match and both the human-approver role and approval-decision scope.
