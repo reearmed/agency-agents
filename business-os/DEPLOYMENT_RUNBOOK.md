@@ -10,7 +10,9 @@ Status: **not deployed**. This checklist is the safe path to a working pilot.
 - [ ] Add integration-specific configuration only after the runtime is selected.
 - [ ] Run repository checks and inspect the final diff.
 
-## Phase 1 — choose and provision an isolated runtime
+## Phase 1 — provision the proposed OpenClaw runtime
+
+OpenClaw is the proposed first runtime because the fork includes an OpenClaw integration and OpenClaw documents isolated per-agent workspaces, tool policies and sandboxing. It is not installed or provisioned yet. Use `business-os/runtime/openclaw/README.md` and validate the example config against the installed release before activation.
 
 Decision criteria: supported agent format, reliable background worker, tool sandboxing, auditability, model/provider flexibility, Canadian data residency options, backup/restore, operator access and total cost.
 
