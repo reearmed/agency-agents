@@ -48,7 +48,7 @@ The user wants useful autonomous work, not just an architecture document. Keep m
 
 ## What has been done
 
-A branch named `business-os/blueprint` was created from `main`. The latest comparison before this handoff refresh showed 59 changed paths, all within `business-os/`, `scripts/bootstrap-business-os-openclaw.sh`, `scripts/test-bootstrap-business-os-openclaw.sh`, and `.github/workflows/business-os-safety-tests.yml`. The branch was 201 commits ahead of and two commits behind `main` because of the accidental handoff add/delete correction pair. The handoff file is absent from `main` again; no other `main` files were changed. Do not rewrite `main` history, merge, or rebase without explicit approval. Recheck the exact comparison before any branch operation.
+A branch named `business-os/blueprint` was created from `main`. The latest comparison before this handoff refresh showed 59 changed paths, all within `business-os/`, `scripts/bootstrap-business-os-openclaw.sh`, `scripts/test-bootstrap-business-os-openclaw.sh`, and `.github/workflows/business-os-safety-tests.yml`. The branch was 203 commits ahead of and two commits behind `main` because of the accidental handoff add/delete correction pair. The handoff file is absent from `main` again; no other `main` files were changed. Do not rewrite `main` history, merge, or rebase without explicit approval. Recheck the exact comparison before any branch operation.
 
 ### Repository deliverables
 - Business OS architecture, data/security and memory design.
@@ -101,9 +101,9 @@ The local `business-os/control_plane/` code is a test prototype only, not a runn
 8. Review database migrations, audit retention, off-host backup and incident recovery designs before any infrastructure approval.
 
 ### Phase 2: infrastructure choice (requires user decision / approval)
-1. Compare isolated hosting options, Canada region availability, security, backup, total cost and operational burden.
-2. Compare separate Business OS database options and exact current costs.
-3. Present the user with exact provider, region, project isolation, recurring charges, and required account access.
+1. Provider research is refreshed: DigitalOcean Basic Toronto TOR1 (4 vCPU / 8 GiB / 160 GiB / 5 TB) is US$48/month; Akamai/Linode Shared Toronto ca-central (4 CPU / 8 GB / 160 GB / 5 TB) is also US$48/month. DigitalOcean remains preferred for its straightforward workflow; Akamai is the equal-cost alternative.
+2. Railway is not a Canada-region option in its current region list. Supabase Pro is US$25/month; additional projects start at US$10/month plus compute/usage charges. The existing NOREVYO production project must never be reused.
+3. Recheck exact checkout pricing, taxes, backup/monitoring add-ons, database compute, model/API usage and total monthly ceiling before presenting a final spend proposal.
 4. Obtain explicit approval before any account creation, purchase, provisioning or paid upgrade.
 
 ### Phase 3: runtime and database (after approval)
@@ -135,7 +135,7 @@ Continue my existing Business OS implementation from the GitHub repository https
 - GitHub Actions verification: run `45873313366` (`https://github.com/reearmed/agency-agents/actions/runs/45873313366`) completed successfully on commit `04a5d13d116db28556366ffb5d13bdbedaa91920`. The `contracts-and-unit-tests` job passed all four JSON Schema fixtures and **67 Python unit tests** (`Ran 67 tests ... OK`), including all 17 approval-grant tests and all 10 mock execution-gateway tests. This is hosted CI evidence for that code commit. The subsequent handoff-only commit `b3b63e3b2d736f8df94e6a222f0ade49a66b92ef` also completed successfully in run `45873347832` (run 67). The final handoff refresh is documentation-only and does not change tested code.
 - Durable outbox and backup GitHub Actions verification: run `45874983027` (run 121, `https://github.com/reearmed/agency-agents/actions/runs/45874983027`) passed all four JSON Schema fixtures and **96 Python unit tests** (`Ran 96 tests ... OK`), including concurrent worker recovery, atomic grant+intent persistence, persistent kill-switch enforcement, destination restart recovery, idempotency, stale-lease handling, intent/audit tamper detection and verified backup/restore.
 - Expanded CI verification: run `45875237846` (run 126, `https://github.com/reearmed/agency-agents/actions/runs/45875237846`) completed successfully. It additionally passed JSON/YAML/JSON5 configuration parsing, bootstrap script syntax, and the synthetic bootstrap safety harness (private modes, nine workspaces, 45 files, dry-run, no-overwrite, relative path, symlink and broad-permission rejection), plus all four JSON Schema fixtures and **96 Python unit tests**.
-- Latest verified pre-handoff commit: `7f5934f842c0b8db17ac3430be2b3561f721301c` (backlog evidence update). Comparison against `main`: 201 ahead, 2 behind, 59 changed paths, all within the approved Business OS/workflow/bootstrap scope. No unexpected paths. Runs 127/128 passed for subsequent documentation-only updates; no code changed after the 96-test code commit.
+- Latest verified pre-handoff commit: `038ce1988a6e7800116c04047bd7a9f70fcba60b` (Canadian hosting/database pricing comparison). Comparison against `main`: 203 ahead, 2 behind, 59 changed paths, all within the approved Business OS/workflow/bootstrap scope. No unexpected paths. Runs 127-130 passed for documentation-only updates; run 131 is queued for the latest hosting-decision documentation. No code changed after the 96-test code commit or the successful expanded CI run 126.
 - Latest work remains isolated to `business-os/blueprint`. No PR, merge, rebase, production change, deployment, infrastructure provisioning or paid service was performed.
 
 ## Final truth statement
