@@ -21,6 +21,10 @@
 | Human approval is attempted without exact subject, scope and human role | Denied |
 | Agent-supplied role/approval field is present | Ignored; authorization comes from verified principal only |
 | Retrieved content contains prompt injection | Treated as untrusted; no policy or tool permission change |
+| Independent verifier is the requester or executor | Denied |
+| Destination evidence has wrong target, payload hash or idempotency key | Denied |
+| Destination evidence source is untrusted or authentication fails | No terminal outcome |
+| Destination evidence is stale, future-dated or inconclusive | No terminal outcome |
 
 ## Functional acceptance
 
