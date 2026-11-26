@@ -98,6 +98,20 @@ class IdentityBoundaryTests(unittest.TestCase):
         with self.assertRaises(IdentityError):
             require_scope({"subject": "operator-1"}, "business-os:read")
 
+    def test_namespaced_role_claim_can_be_configured_for_oidc_provider(self):
+        namespaced = "https://norevyo.com/claims/roles"
+        self.token_claims = claims(**{namespaced: ["business-os:human-approver"]})
+        self.token_claims.pop("roles")
+        boundary = IdentityBoundary(
+            token_verifier=lambda token: self.token_claims,
+            expected_issuer="https://identity.example.test/",
+            expected_audience="business-os-api",
+            role_claim=namespaced,
+            clock=lambda: NOW,
+        )
+        principal = boundary.authenticate("Bearer signed-test-token")
+        self.assertTrue(human_approver_identity_verifier("operator-1", principal))
+
     def test_unrecognized_scopes_and_roles_are_not_granted(self):
         self.token_claims = claims(
             scope="business-os:read billing:admin",
