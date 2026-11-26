@@ -439,6 +439,87 @@ class SQLiteGrantLedger:
             previous = row["event_hash"]
         return True
 
+    def verify_budget_integrity(self) -> bool:
+        """Check budget limits and immutable reservation scope against audit evidence."""
+        conn = self._connect()
+        try:
+            limits = conn.execute("SELECT * FROM execution_budget_limits").fetchall()
+            reservations = conn.execute("SELECT * FROM execution_budget_reservations").fetchall()
+            intents = conn.execute("SELECT task_id, budget_reservation_json FROM execution_intents").fetchall()
+            events = conn.execute(
+                """SELECT intent_id, event, details_json FROM execution_events
+                   WHERE event IN ('budget_configured','budget_reserved','budget_settled','budget_released')"""
+            ).fetchall()
+        finally:
+            conn.close()
+        configured, reserved, settled, released = {}, {}, {}, {}
+        for event in events:
+            try:
+                details = json.loads(event["details_json"])
+            except (TypeError, json.JSONDecodeError):
+                return False
+            if not isinstance(details, dict):
+                return False
+            if event["event"] == "budget_configured":
+                key, target = details.get("period"), configured
+            elif event["event"] == "budget_reserved":
+                key, target = event["intent_id"], reserved
+            elif event["event"] == "budget_settled":
+                key, target = event["intent_id"], settled
+            else:
+                key, target = event["intent_id"], released
+            if not key or key in target:
+                return False
+            target[key] = details
+        if len(configured) != len(limits) or len(reserved) != len(reservations):
+            return False
+        for limit in limits:
+            details = configured.get(limit["period"])
+            if not details or any(details.get(key) != value for key, value in {
+                "monthly_limit_minor": limit["monthly_limit_minor"],
+                "per_task_limit_minor": limit["per_task_limit_minor"],
+                "currency": limit["currency"],
+            }.items()):
+                return False
+        reservation_map = {row["task_id"]: row for row in reservations}
+        for intent in intents:
+            try:
+                budget = json.loads(intent["budget_reservation_json"]) if intent["budget_reservation_json"] else None
+            except (TypeError, json.JSONDecodeError):
+                return False
+            row = reservation_map.get(intent["task_id"])
+            if budget is None:
+                if row is not None:
+                    return False
+                continue
+            if row is None:
+                return False
+            details = reserved.get(intent["task_id"])
+            expected = {
+                "reservation_id": row["reservation_id"],
+                "amount_minor": row["amount_minor"],
+                "currency": row["currency"],
+                "period": row["period"],
+            }
+            if not isinstance(budget, dict) or any(budget.get(k) != v for k, v in expected.items()):
+                return False
+            if not details or any(details.get(k) != v for k, v in expected.items()):
+                return False
+            settled_event = settled.get(intent["task_id"])
+            released_event = released.get(intent["task_id"])
+            if row["state"] == "RESERVED":
+                if settled_event or released_event or row["actual_minor"] is not None:
+                    return False
+            elif row["state"] == "SETTLED":
+                if not settled_event or released_event or settled_event.get("actual_minor") != row["actual_minor"]:
+                    return False
+            elif row["state"] == "RELEASED":
+                if not released_event or settled_event or row["actual_minor"] is not None:
+                    return False
+            else:
+                return False
+        return True
+
     def verify_execution_integrity(self) -> bool:
         """Check current immutable intent rows against their original audit events."""
         conn = self._connect()
@@ -488,7 +569,7 @@ class SQLiteGrantLedger:
                 details.get(key) != value for key, value in expected.items()
             ):
                 return False
-        return True
+        return self.verify_budget_integrity()
 
     def consume(self, grant_id: str, grant_sha256: str) -> None:
         """Atomically claim a grant ID. Duplicate or raced claims are rejected."""
