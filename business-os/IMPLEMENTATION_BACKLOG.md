@@ -28,7 +28,7 @@ Status: **local safety prototype added; production-grade control plane and runti
 - Terminal success/failure requires a verifier identity and evidence hash; adapter timeouts can remain `unknown` pending reconciliation. These are test-only trust parameters, not authenticated identity or evidence verification.
 - Feature-branch CI validates JSON schemas/fixtures and runs the Python unit tests.
 
-These components are local reference implementations and have no external adapters. SQLite persistence is single-host only. They are not production-ready. Earlier hosted GitHub Actions run 45873313366 passed 67 Python unit tests and all four JSON Schema fixtures on the then-current code; run 45873347832 also passed for the subsequent handoff-only commit. The new durable outbox and its added tests were committed afterward; their hosted CI result is pending verification and must not be inferred from the earlier runs.
+These components are local reference implementations and have no external adapters. SQLite persistence is single-host only. They are not production-ready. Hosted GitHub Actions run 45874095396 (run 82, https://github.com/reearmed/agency-agents/actions/runs/45874095396) passed on commit 85e3b8b0d0c3d813764595fc823bbc8e501204bf. The contracts job validated all four JSON Schema fixtures and ran 78 Python unit tests, including 11 durable outbox tests. The earlier run 45873313366 passed the prior 67-test suite.
 
 ## Release 1 — internal research and NOREVYO improvement (P1)
 
