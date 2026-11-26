@@ -73,7 +73,8 @@ The durable gateway accepts only the exact `SQLiteMockAdapter` and
 DISPATCHING approved intent, stores immutable receipts in SQLite, enforces
 idempotency-key/payload matching, and checks the persistent kill switch at the
 destination boundary. It rejects direct unapproved calls and verifies that
-every receipt maps to an immutable execution intent. This supports tests across
+every receipt maps to an immutable execution intent and hash-chained
+`destination_accepted` event. This supports tests across
 gateway restarts, but it does not make a remote side effect exactly-once: a
 real destination must provide durable idempotency and authoritative lookup
 semantics. The older `execution_gateway.py` remains an in-memory test harness.
