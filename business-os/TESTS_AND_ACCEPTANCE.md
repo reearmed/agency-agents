@@ -52,3 +52,21 @@ Run a 7-day internal-only pilot using synthetic or explicitly approved low-risk 
 - documented operator pause and recovery drill.
 
 Any failed critical security test blocks activation of external integrations.
+
+
+## Current prototype evidence (not production acceptance)
+
+As of 26 November 2026, the isolated feature-branch CI run
+[45876789287](https://github.com/reearmed/agency-agents/actions/runs/45876789287)
+passed six JSON Schema fixtures, 105 Python unit tests, JSON/YAML/JSON5
+configuration parsing, the synthetic bootstrap safety harness, and the
+budget-enabled synthetic control-plane end-to-end smoke test. The smoke test
+covers signed approval, atomic budget reservation and intent creation,
+mock destination acceptance, process-style restart, reconciliation,
+settlement, private backup/restore and kill-switch enforcement.
+
+These results validate local reference code only. They do not satisfy the
+production functional-acceptance checklist above. The authenticated API,
+production identity provider, independent external verifier, multi-host
+queue, real adapters, provider invoice metering, off-host backup automation,
+OpenClaw runtime validation and 7-day pilot remain incomplete.
