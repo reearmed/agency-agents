@@ -61,6 +61,14 @@ class SQLiteGrantLedger:
                 grant_sha256 TEXT NOT NULL,
                 consumed_at TEXT NOT NULL
             )""")
+            conn.executescript("""
+                CREATE TRIGGER IF NOT EXISTS consumed_grants_no_update
+                BEFORE UPDATE ON consumed_grants
+                BEGIN SELECT RAISE(ABORT, 'consumed grants are append-only'); END;
+                CREATE TRIGGER IF NOT EXISTS consumed_grants_no_delete
+                BEFORE DELETE ON consumed_grants
+                BEGIN SELECT RAISE(ABORT, 'consumed grants are append-only'); END;
+            """)
         finally:
             conn.close()
         if not existed:
