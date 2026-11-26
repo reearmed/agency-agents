@@ -554,16 +554,39 @@ class SQLiteGrantLedger:
         try:
             intents = conn.execute("SELECT * FROM execution_intents").fetchall()
             receipts = conn.execute("SELECT * FROM mock_destination_receipts").fetchall()
+            events = conn.execute(
+                """SELECT intent_id, details_json FROM execution_events
+                   WHERE event='destination_accepted'"""
+            ).fetchall()
         finally:
             conn.close()
         by_key = {row["idempotency_key"]: row for row in intents}
         receipt_map = {row["idempotency_key"]: row for row in receipts}
-        if len(receipt_map) != len(receipts):
+        if len(receipt_map) != len(receipts) or len(events) != len(receipts):
             return False
+        acceptance_map = {}
+        for event in events:
+            try:
+                details = json.loads(event["details_json"])
+            except (TypeError, json.JSONDecodeError):
+                return False
+            if not isinstance(details, dict):
+                return False
+            key = details.get("idempotency_key")
+            if not key or key in acceptance_map:
+                return False
+            acceptance_map[key] = (event["intent_id"], details)
         for receipt in receipts:
             intent = by_key.get(receipt["idempotency_key"])
+            acceptance = acceptance_map.get(receipt["idempotency_key"])
             if (intent is None or receipt["operation_sha256"] != intent["operation_sha256"]
-                    or receipt["result"] != "mock-accepted"):
+                    or receipt["result"] != "mock-accepted" or acceptance is None):
+                return False
+            event_intent, details = acceptance
+            if (event_intent != intent["intent_id"]
+                    or details.get("operation_sha256") != receipt["operation_sha256"]
+                    or details.get("result") != receipt["result"]
+                    or details.get("created_at") != receipt["created_at"]):
                 return False
         for intent in intents:
             has_receipt = intent["idempotency_key"] in receipt_map
@@ -819,6 +842,11 @@ class SQLiteGrantLedger:
                     raise GrantError("mock destination idempotency key reused for different operation")
                 if intent["state"] in {"READY", "FAILED"}:
                     raise GrantError("existing destination receipt conflicts with execution intent state")
+                self._append_execution_event(
+                    conn, intent["intent_id"], "destination_replayed",
+                    idempotency_key=idempotency_key, operation_sha256=digest,
+                    receipt_created_at=row["created_at"], replayed_at=now,
+                )
                 conn.commit()
                 return dict(row)
             if intent["state"] != "DISPATCHING":
@@ -833,6 +861,11 @@ class SQLiteGrantLedger:
                 "SELECT * FROM mock_destination_receipts WHERE idempotency_key=?",
                 (idempotency_key,),
             ).fetchone()
+            self._append_execution_event(
+                conn, intent["intent_id"], "destination_accepted",
+                idempotency_key=idempotency_key, operation_sha256=digest,
+                result="mock-accepted", created_at=now,
+            )
             conn.commit()
             return dict(created)
         except Exception:
