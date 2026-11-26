@@ -315,6 +315,147 @@ class DurableExecutionTests(unittest.TestCase):
         self.assertTrue(restored.verify_execution_integrity())
         self.assertEqual(stat.S_IMODE(backup.stat().st_mode), 0o600)
 
+    def test_budget_reservation_is_atomic_with_intent_and_settlement(self):
+        self.ledger.configure_budget(
+            period="2026-11", monthly_limit_minor=1000,
+            per_task_limit_minor=800, currency="USD",
+        )
+        payload = {
+            **self.payload,
+            "_budget": {
+                "reservation_id": "budget-res-1",
+                "amount_minor": 700,
+                "currency": "USD",
+                "period": "2026-11",
+            },
+        }
+        token = self.issue(payload=payload, task_id="budget-task-1", key="budget-idem-1")
+        result = self.gateway.submit(
+            token, task_id="budget-task-1", payload=payload, adapter_name="mock",
+            action="create", target="sandbox-object", idempotency_key="budget-idem-1",
+            requester_id="agent-1",
+        )
+        usage = self.ledger.budget_usage("2026-11")
+        self.assertEqual(usage["reserved_minor"], 700)
+        self.assertEqual(usage["remaining_minor"], 300)
+        self.assertEqual(result["state"], "VERIFY_PENDING")
+        self.ledger.settle_budget("budget-task-1", 650)
+        usage = self.ledger.budget_usage("2026-11")
+        self.assertEqual(usage["reserved_minor"], 0)
+        self.assertEqual(usage["settled_minor"], 650)
+        self.assertTrue(self.ledger.verify_execution_integrity())
+
+    def test_monthly_budget_hard_stop_rolls_back_grant_and_intent(self):
+        self.ledger.configure_budget(
+            period="2026-11", monthly_limit_minor=1000,
+            per_task_limit_minor=800, currency="USD",
+        )
+        first_payload = {
+            **self.payload,
+            "_budget": {"reservation_id": "res-1", "amount_minor": 700, "currency": "USD", "period": "2026-11"},
+        }
+        first_token = self.issue(payload=first_payload, task_id="budget-task-1", key="budget-idem-1")
+        self.gateway.submit(
+            first_token, task_id="budget-task-1", payload=first_payload, adapter_name="mock",
+            action="create", target="sandbox-object", idempotency_key="budget-idem-1",
+            requester_id="agent-1",
+        )
+        second_payload = {
+            **self.payload,
+            "_budget": {"reservation_id": "res-2", "amount_minor": 400, "currency": "USD", "period": "2026-11"},
+        }
+        second_token = self.issue(payload=second_payload, task_id="budget-task-2", key="budget-idem-2")
+        second_grant_id = self.gateway._grant_id_from_token(second_token)
+        with self.assertRaises(DurableExecutionError):
+            self.gateway.submit(
+                second_token, task_id="budget-task-2", payload=second_payload, adapter_name="mock",
+                action="create", target="sandbox-object", idempotency_key="budget-idem-2",
+                requester_id="agent-1",
+            )
+        self.assertIsNone(self.ledger.get_intent(second_grant_id))
+        conn = sqlite3.connect(self.db)
+        try:
+            consumed = conn.execute(
+                "SELECT 1 FROM consumed_grants WHERE grant_id=?", (second_grant_id,)
+            ).fetchone()
+        finally:
+            conn.close()
+        self.assertIsNone(consumed)
+        self.assertEqual(self.ledger.budget_usage("2026-11")["used_minor"], 700)
+        self.assertEqual(self.adapter.call_count, 1)
+
+    def test_missing_budget_configuration_and_per_task_overage_fail_closed(self):
+        payload = {
+            **self.payload,
+            "_budget": {"reservation_id": "res-missing", "amount_minor": 100, "currency": "USD", "period": "2026-11"},
+        }
+        token = self.issue(payload=payload, task_id="budget-missing", key="budget-missing-key")
+        with self.assertRaises(DurableExecutionError):
+            self.gateway.submit(
+                token, task_id="budget-missing", payload=payload, adapter_name="mock",
+                action="create", target="sandbox-object", idempotency_key="budget-missing-key",
+                requester_id="agent-1",
+            )
+        self.ledger.configure_budget(
+            period="2026-11", monthly_limit_minor=1000,
+            per_task_limit_minor=500, currency="USD",
+        )
+        over = {
+            **self.payload,
+            "_budget": {"reservation_id": "res-over", "amount_minor": 600, "currency": "USD", "period": "2026-11"},
+        }
+        over_token = self.issue(payload=over, task_id="budget-over", key="budget-over-key")
+        with self.assertRaises(DurableExecutionError):
+            self.gateway.submit(
+                over_token, task_id="budget-over", payload=over, adapter_name="mock",
+                action="create", target="sandbox-object", idempotency_key="budget-over-key",
+                requester_id="agent-1",
+            )
+        self.assertEqual(self.ledger.budget_usage("2026-11")["used_minor"], 0)
+        self.assertEqual(self.adapter.call_count, 0)
+
+    def test_budget_release_requires_verified_no_effect(self):
+        self.ledger.configure_budget(
+            period="2026-11", monthly_limit_minor=1000,
+            per_task_limit_minor=500, currency="USD",
+        )
+        payload = {
+            **self.payload,
+            "_budget": {"reservation_id": "res-release", "amount_minor": 300, "currency": "USD", "period": "2026-11"},
+        }
+        token = self.issue(payload=payload, task_id="budget-release", key="budget-release-key")
+        self.gateway.submit(
+            token, task_id="budget-release", payload=payload, adapter_name="mock",
+            action="create", target="sandbox-object", idempotency_key="budget-release-key",
+            requester_id="agent-1",
+        )
+        with self.assertRaises(GrantError):
+            self.ledger.release_budget("budget-release", verified_no_effect=False)
+        self.ledger.release_budget("budget-release", verified_no_effect=True)
+        self.assertEqual(self.ledger.budget_usage("2026-11")["used_minor"], 0)
+        self.assertEqual(self.ledger.get_budget_reservation("budget-release")["state"], "RELEASED")
+        self.assertTrue(self.ledger.verify_execution_integrity())
+
+    def test_budget_settlement_cannot_exceed_reserved_amount(self):
+        self.ledger.configure_budget(
+            period="2026-11", monthly_limit_minor=1000,
+            per_task_limit_minor=500, currency="USD",
+        )
+        payload = {
+            **self.payload,
+            "_budget": {"reservation_id": "res-settle", "amount_minor": 300, "currency": "USD", "period": "2026-11"},
+        }
+        token = self.issue(payload=payload, task_id="budget-settle", key="budget-settle-key")
+        self.gateway.submit(
+            token, task_id="budget-settle", payload=payload, adapter_name="mock",
+            action="create", target="sandbox-object", idempotency_key="budget-settle-key",
+            requester_id="agent-1",
+        )
+        with self.assertRaises(GrantError):
+            self.ledger.settle_budget("budget-settle", 301)
+        self.assertEqual(self.ledger.get_budget_reservation("budget-settle")["state"], "RESERVED")
+        self.assertTrue(self.ledger.verify_execution_integrity())
+
     def test_backup_refuses_to_overwrite_existing_file(self):
         backup = Path(self.temp.name) / "existing-backup.sqlite3"
         backup.write_text("do not overwrite")
