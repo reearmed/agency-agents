@@ -3,7 +3,7 @@
 **Last updated:** 26 November 2026  
 **Repository:** https://github.com/reearmed/agency-agents  
 **Working branch:** `business-os/blueprint`  
-**Last tested code commit:** `46c7747c8d769aff77587c40c6c91a6631650e3f` (subsequent commits refresh documentation; always inspect the live branch ref before proceeding)  
+**Last tested code commit:** `e750d7712c345da9ac22c41243197c751e6c7491` (subsequent commits refresh documentation; always inspect the live branch ref before proceeding)  
 **Base branch:** `main`  
 **Status:** guarded architecture, nine agent definitions, local mock-only control plane, durable SQLite outbox/budget prototype, strict identity boundary component, CI and synthetic tests. **Not deployed, not running, and not connected to external actions.**
 
@@ -56,12 +56,12 @@ Autonomy is guarded. Internal research, analysis, code, drafts and synthetic tes
 - Fork: `reearmed/agency-agents`.
 - Branch: `business-os/blueprint`.
 - Branch tip immediately before this handoff refresh: `7d0846e037f72b87e2c5544cc9ff0b9f85144182`; this refresh adds one documentation-only commit.
-- Compare against `main`: latest verified snapshot immediately before this handoff refresh was **394 commits ahead, 6 behind, 77 changed paths**. This handoff refresh is documentation-only; recheck the live compare before any branch operation.
+- Compare against `main`: latest verified snapshot immediately before this handoff refresh was **396 commits ahead, 6 behind, 79 changed paths**. This handoff refresh is documentation-only; recheck the live compare before any branch operation.
 - The six commits behind comprise two pre-existing divergence commits plus four commits created while restoring the accidentally altered main tree. Do not rebase, force-push, rewrite history or merge to resolve this without explicit approval.
-- The 77 changed paths are confined to `business-os/`, `scripts/bootstrap-business-os-openclaw.sh`, `scripts/test-bootstrap-business-os-openclaw.sh`, and `.github/workflows/business-os-safety-tests.yml`.
+- The 79 changed paths are confined to `business-os/`, `scripts/bootstrap-business-os-openclaw.sh`, `scripts/test-bootstrap-business-os-openclaw.sh`, and `.github/workflows/business-os-safety-tests.yml`.
 - No open pull requests were returned in the latest check. A compare of the current `main` tree against its pre-incident baseline returns **zero changed files**; the four restoration add/delete commits remain in history.
-- Latest code-test CI: [run 45891543239](https://github.com/reearmed/agency-agents/actions/runs/45891543239), completed successfully on tested code commit `46c7747c8d769aff77587c40c6c91a6631650e3f`; 168 Python tests passed, including offline RSA signature verification and RFC 9068 token-profile tests. Latest documentation-only CI [run 45891638033](https://github.com/reearmed/agency-agents/actions/runs/45891638033) also passed; verify the latest Actions run before continuing.
-- Latest CI evidence: six JSON Schema fixtures, **168 Python unit tests**, JSON/YAML/JSON5 config checks, OpenClaw policy assertions, bootstrap safety harness and budget-enabled synthetic durable E2E all passed.
+- Latest code-test CI: [run 45891752482](https://github.com/reearmed/agency-agents/actions/runs/45891752482), completed successfully on tested code commit `e750d7712c345da9ac22c41243197c751e6c7491`; 176 Python tests passed, including offline RSA signature verification, RFC 9068 token-profile tests and route-authorization tests across every OpenAPI operation. The budget-enabled synthetic durable E2E passed. Subsequent documentation commits passed CI; verify the latest Actions run before continuing.
+- Latest CI evidence: six JSON Schema fixtures, **176 Python unit tests**, JSON/YAML/JSON5 config checks, OpenClaw policy assertions, bootstrap safety harness and budget-enabled synthetic durable E2E all passed.
 - No PR was created, no merge/rebase was performed, no production deployment occurred and no infrastructure was provisioned.
 
 ## Implemented repository deliverables
@@ -93,6 +93,7 @@ Autonomy is guarded. Internal research, analysis, code, drafts and synthetic tes
 ### Identity boundary and API contract (new)
 - `identity_boundary.py` adds bounded Bearer parsing, exact issuer/audience checks, subject/token-ID requirements, expiry/not-before/issued-at/maximum-lifetime checks, scopes and roles.
 - `auth0_jwt_verifier.py` is a concrete issuer-pinned Auth0 RS256/JWKS verifier using PyJWT[crypto] 2.15.1. It derives the JWKS URL from the trusted HTTPS issuer, pins RS256, bounds JWKS fetch/cache, requires RFC 9068 `at+jwt` plus `jti` and `client_id`, and rejects default Auth0 JWT-profile tokens. Dependency pin: `business-os/control_plane/requirements-auth.txt`.
+- `route_authorization.py` applies the server-owned OpenAPI operation policy after authentication. It requires every declared scope and role, rejects missing/unknown policy and only permits explicitly public operations with no privilege extensions. CI tests all OpenAPI operations; it is not yet wired into an HTTP server.
 - Produces a minimal immutable principal without retaining the bearer token.
 - `human_approver_identity_verifier` is a callback for the existing approval authority. It requires the verified subject to match the approver ID and requires both `business-os:approval:decide` scope and `business-os:human-approver` role. The identity boundary filters scopes and roles through explicit Business OS allowlists; unknown claims do not grant privileges, supports a configurable namespaced role claim for OIDC providers such as Auth0, and API contract tests verify every route scope/role against those allowlists. Auth0 Public Cloud Canada Essentials is the preferred managed identity candidate (US$35/month, 500 MAU, Pro MFA and RBAC); its listed 1,000 M2M authentications require quota-unit and token-caching confirmation. No tenant is provisioned. A separate `IndependentEvidenceVerifier` contract requires an independently authenticated verifier identity, exact destination evidence, trusted source, authenticated evidence, bounded timestamps and payload/idempotency/target matching. It is tested with synthetic callbacks only and is not wired to a live destination.
 - `durable_execution.py` now bounds and strictly parses the untrusted grant ID routing hint before the approval authority independently verifies the HMAC, schema, expiry and exact scope.
@@ -108,7 +109,7 @@ Autonomy is guarded. Internal research, analysis, code, drafts and synthetic tes
 - Workflow: `.github/workflows/business-os-safety-tests.yml`.
 - Latest successful run: [45885579756](https://github.com/reearmed/agency-agents/actions/runs/45885579756).
 - Hosted CI passed **147 Python unit tests**, six JSON Schema fixtures, JSON/YAML/JSON5 parsing, OpenClaw config policy assertions, synthetic bootstrap safety checks and budget-enabled durable E2E.
-- The latest run included strict token-parser tests, identity-boundary tests, end-to-end identity-to-approval integration tests, Business OS scope/role allowlist tests, independent-verifier evidence tests, OpenAPI contract safety tests and concrete offline RSA/JWKS verifier tests. Subsequent commits updated documentation only.
+- The latest run included strict token-parser tests, identity-boundary tests, end-to-end identity-to-approval integration tests, Business OS scope/role allowlist tests, independent-verifier evidence tests, OpenAPI contract safety and route-authorization tests, and concrete offline RSA/JWKS verifier tests. Subsequent commits updated documentation only.
 - No local Mac test has been performed. The bootstrap helper has not been applied to the user's Mac.
 
 ## Repository safety incident and restoration
