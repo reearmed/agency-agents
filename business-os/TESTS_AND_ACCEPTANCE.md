@@ -52,7 +52,7 @@ Run a 7-day internal-only pilot using synthetic or explicitly approved low-risk 
 Latest feature-branch CI run: [45886961781](https://github.com/reearmed/agency-agents/actions/runs/45886961781), on commit `7678bb76830cebd1b204473debfaf7199c742d5b`.
 
 Verified by hosted CI:
-- **156 Python unit tests passed** (`Ran 156 tests ... OK`).
+- **156 Python unit tests (before the concrete RS256 verifier tests) passed** (`Ran 156 tests ... OK`).
 - Six JSON Schema fixtures passed.
 - JSON, YAML and JSON5 configuration parsing passed.
 - OpenClaw example policy assertions passed, including explicit deny/allow lists, disabled cross-agent access, tree session visibility, disabled elevated/cron/restart, Docker network/root/capability controls and orchestrator-only delegation.
@@ -65,7 +65,7 @@ These results validate local reference code only. They do not constitute product
 
 ## Remaining activation blockers
 
-1. Cryptographic OIDC/JWT verifier backed by a selected identity provider, with issuer pinning, algorithm allowlist, JWKS rotation and revocation policy.
+1. Configure and verify the concrete RS256/JWKS component against a real Auth0 Canada tenant; add production-grade revocation/session strategy, dependency lockfile hashes, key-rotation drill and live JWKS failure tests.
 2. Authenticated API with server-side route scopes, tenant/resource isolation, request limits, rate limits and secure session handling.
 3. Independently administered signing-key storage, rotation and grant revocation.
 4. Independent destination verifier and evidence retrieval for every real adapter.
