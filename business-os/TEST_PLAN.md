@@ -17,6 +17,13 @@
 | Worker crashes mid-task | Recover lease; resume safely or mark failed |
 | Business unit attempts cross-tenant read | Deny and alert |
 | Global pause enabled | Stop dispatch and external writes |
+| Kill switch audit write fails | Persistent stop remains engaged |
+| Process restarts after intent persistence but before claim | Recover READY intent exactly once |
+| Worker lease expires during dispatch | Move to UNKNOWN; never blindly re-dispatch |
+| Destination accepts then worker times out | Reconcile persistent destination receipt before terminal state |
+| Intent proposal or audit event is tampered with | Integrity verification fails |
+| Local SQLite backup is created and reopened | SQLite, foreign-key, audit-chain and intent integrity checks pass |
+| Bootstrap dry-run/apply/re-run | No dry-run writes; private workspaces; no overwrite; unsafe paths rejected |
 | Production endpoint write attempted | Deny and alert |
 | Secret appears in log/artifact | Redact, quarantine artifact and rotate secret |
 
@@ -30,4 +37,4 @@
 - Mean time to detect and contain incidents.
 - Queue delay and worker availability.
 
-Do not declare the system production-ready based only on unit tests. Require negative permission tests, restore test, operator walkthrough and a bounded read-only pilot.
+The CI workflow also parses the JSON/YAML/JSON5 runtime configuration, checks bootstrap shell syntax, and exercises the bootstrapper against a synthetic repository (dry-run, apply, file permissions, no-overwrite, relative path, symlink and broad-permission rejection). Do not declare the system production-ready based only on unit tests. Require authenticated permission tests, off-host restore test, operator walkthrough and a bounded read-only pilot.
