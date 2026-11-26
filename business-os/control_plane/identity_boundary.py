@@ -58,6 +58,7 @@ class IdentityBoundary:
         token_verifier: Callable[[str], Mapping[str, Any]],
         expected_issuer: str,
         expected_audience: str,
+        role_claim: str = "roles",
         clock: Callable[[], float] = time.time,
         clock_skew_seconds: int = 30,
         max_lifetime_seconds: int = 3600,
@@ -68,6 +69,8 @@ class IdentityBoundary:
             raise ValueError("expected issuer is required")
         if not isinstance(expected_audience, str) or not expected_audience.strip():
             raise ValueError("expected audience is required")
+        if not isinstance(role_claim, str) or not role_claim.strip() or len(role_claim) > 256:
+            raise ValueError("role claim name is invalid")
         if isinstance(clock_skew_seconds, bool) or not isinstance(clock_skew_seconds, int) or not 0 <= clock_skew_seconds <= 300:
             raise ValueError("clock skew must be between 0 and 300 seconds")
         if isinstance(max_lifetime_seconds, bool) or not isinstance(max_lifetime_seconds, int) or not 1 <= max_lifetime_seconds <= 86400:
@@ -75,6 +78,7 @@ class IdentityBoundary:
         self._token_verifier = token_verifier
         self._issuer = expected_issuer
         self._audience = expected_audience
+        self._role_claim = role_claim
         self._clock = clock
         self._skew = clock_skew_seconds
         self._max_lifetime = max_lifetime_seconds
@@ -150,7 +154,7 @@ class IdentityBoundary:
         if not isinstance(raw_scopes, str):
             raise IdentityError("token scope claim must be a space-delimited string")
         scopes = frozenset(scope for scope in raw_scopes.split() if scope in BUSINESS_OS_SCOPES)
-        raw_roles = claims.get("roles", [])
+        raw_roles = claims.get(self._role_claim, [])
         if (
             not isinstance(raw_roles, (list, tuple))
             or any(not isinstance(role, str) or not role.strip() for role in raw_roles)
