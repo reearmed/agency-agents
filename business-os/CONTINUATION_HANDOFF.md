@@ -55,12 +55,12 @@ Autonomy is guarded. Internal research, analysis, code, drafts and synthetic tes
 
 - Fork: `reearmed/agency-agents`.
 - Branch: `business-os/blueprint`.
-- Branch tip immediately before this handoff refresh: `c5531dd9335d23c4da739b11694a389301291aad`; this refresh adds one documentation-only commit.
-- Compare against `main`: latest verified snapshot immediately before this handoff refresh was **372 commits ahead, 6 behind, 74 changed paths**. This handoff refresh is documentation-only; recheck the live compare before any branch operation.
+- Branch tip immediately before this handoff refresh: `7d0846e037f72b87e2c5544cc9ff0b9f85144182`; this refresh adds one documentation-only commit.
+- Compare against `main`: latest verified snapshot immediately before this handoff refresh was **394 commits ahead, 6 behind, 77 changed paths**. This handoff refresh is documentation-only; recheck the live compare before any branch operation.
 - The six commits behind comprise two pre-existing divergence commits plus four commits created while restoring the accidentally altered main tree. Do not rebase, force-push, rewrite history or merge to resolve this without explicit approval.
-- The 74 changed paths are confined to `business-os/`, `scripts/bootstrap-business-os-openclaw.sh`, `scripts/test-bootstrap-business-os-openclaw.sh`, and `.github/workflows/business-os-safety-tests.yml`.
-- No open pull requests were returned in the latest check.
-- Latest code-test CI: [run 45891543239](https://github.com/reearmed/agency-agents/actions/runs/45891543239), completed successfully on tested code commit `46c7747c8d769aff77587c40c6c91a6631650e3f`; 168 Python tests passed, including offline RSA signature verification and RFC 9068 token-profile tests. Subsequent commits refreshed documentation; verify the latest Actions run before continuing.
+- The 77 changed paths are confined to `business-os/`, `scripts/bootstrap-business-os-openclaw.sh`, `scripts/test-bootstrap-business-os-openclaw.sh`, and `.github/workflows/business-os-safety-tests.yml`.
+- No open pull requests were returned in the latest check. A compare of the current `main` tree against its pre-incident baseline returns **zero changed files**; the four restoration add/delete commits remain in history.
+- Latest code-test CI: [run 45891543239](https://github.com/reearmed/agency-agents/actions/runs/45891543239), completed successfully on tested code commit `46c7747c8d769aff77587c40c6c91a6631650e3f`; 168 Python tests passed, including offline RSA signature verification and RFC 9068 token-profile tests. Latest documentation-only CI [run 45891638033](https://github.com/reearmed/agency-agents/actions/runs/45891638033) also passed; verify the latest Actions run before continuing.
 - Latest CI evidence: six JSON Schema fixtures, **168 Python unit tests**, JSON/YAML/JSON5 config checks, OpenClaw policy assertions, bootstrap safety harness and budget-enabled synthetic durable E2E all passed.
 - No PR was created, no merge/rebase was performed, no production deployment occurred and no infrastructure was provisioned.
 
