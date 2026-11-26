@@ -66,7 +66,6 @@ class IdentityApprovalIntegrationTests(unittest.TestCase):
             target="synthetic-destination",
             idempotency_key="identity-idem-1",
             requester_id="agent-1",
-            now=__import__("datetime").datetime.fromtimestamp(NOW, __import__("datetime").timezone.utc),
         )
         self.assertEqual(grant["approver_id"], "operator-1")
 
