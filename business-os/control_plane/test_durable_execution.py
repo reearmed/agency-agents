@@ -146,6 +146,43 @@ class DurableExecutionTests(unittest.TestCase):
         self.assertEqual(self.ledger.list_ready_intents(), [])
         self.assertEqual(self.adapter.call_count, 0)
 
+    def test_execution_audit_chain_verifies_and_is_append_only(self):
+        result = self.submit()
+        self.assertTrue(self.ledger.verify_execution_audit_chain())
+        conn = sqlite3.connect(self.db)
+        try:
+            with self.assertRaises(sqlite3.IntegrityError):
+                conn.execute("DELETE FROM execution_events")
+        finally:
+            conn.close()
+        self.assertTrue(self.ledger.verify_execution_audit_chain())
+
+    def test_concurrent_workers_cannot_claim_the_same_ready_intent(self):
+        from guardrails import canonical_json, payload_sha256
+        grant_id = self.gateway._grant_id_from_token(self.token)
+        self.authority.verify_and_consume(
+            self.token, task_id="task-1", payload=self.payload, adapter="mock",
+            action="create", target="sandbox-object", idempotency_key="idem-1",
+            requester_id="agent-1",
+            execution_intent={
+                "intent_id": grant_id, "task_id": "task-1", "idempotency_key": "idem-1",
+                "operation_json": canonical_json(self.payload).decode(),
+                "operation_sha256": payload_sha256(self.payload), "adapter": "mock",
+                "action": "create", "target": "sandbox-object",
+            },
+        )
+        from concurrent.futures import ThreadPoolExecutor
+        def claim(worker):
+            try:
+                self.ledger.claim_intent(grant_id, worker)
+                return "claimed"
+            except GrantError:
+                return "denied"
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            outcomes = list(pool.map(claim, ["worker-a", "worker-b"]))
+        self.assertEqual(outcomes.count("claimed"), 1)
+        self.assertEqual(outcomes.count("denied"), 1)
+
     def test_real_adapter_rejected(self):
         class FakeAdapter:
             pass
