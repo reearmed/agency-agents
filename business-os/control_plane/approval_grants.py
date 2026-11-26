@@ -470,11 +470,16 @@ class SQLiteGrantLedger:
                 actual_hash = payload_sha256(json.loads(intent["operation_json"]))
             except Exception:
                 return False
+            try:
+                budget = json.loads(intent["budget_reservation_json"]) if intent["budget_reservation_json"] else None
+            except (TypeError, json.JSONDecodeError):
+                return False
             expected = {
                 "grant_id": intent["grant_id"],
                 "task_id": intent["task_id"],
                 "idempotency_key": intent["idempotency_key"],
                 "operation_sha256": intent["operation_sha256"],
+                "budget_reservation": budget,
                 "adapter": intent["adapter"],
                 "action": intent["action"],
                 "target": intent["target"],
