@@ -21,6 +21,10 @@ One primary execution bet at a time. Research can cover all three; active build 
 - [Autonomy policy](AUTONOMY.md): permissions, approval gates and stop conditions.
 - [Revenue workflows](REVENUE_WORKFLOWS.md): repeatable operating cycles.
 - [Data and security](DATA_SECURITY.md): isolation, secrets, privacy and retention.
+- [Memory architecture](MEMORY_ARCHITECTURE.md): operational state, curated shared knowledge and agent-local memory.
+- [Database reference](database/README.md): private isolated schema and verification queries.
+- [OpenClaw runtime starter](runtime/openclaw/README.md): guarded multi-agent configuration and workspace bootstrap.
+- [Hosting decision](runtime/HOSTING_DECISION.md): proposed Toronto VPS footprint and cost estimate.
 - [Deployment runbook](DEPLOYMENT_RUNBOOK.md): staged path from local dry-run to a guarded pilot.
 - [Configuration contract](config/system.yaml): intended runtime settings; placeholders only.
 - [Agent prompts](agents/): tailored role instructions for this operating system.
