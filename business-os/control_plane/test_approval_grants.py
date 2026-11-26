@@ -104,6 +104,11 @@ class ApprovalGrantTests(unittest.TestCase):
         mode = stat.S_IMODE(Path(self.ledger.path).stat().st_mode)
         self.assertEqual(mode, 0o600)
 
+    def test_ledger_rejects_parent_traversal_components(self):
+        unsafe = Path(self.tmp.name) / ".." / "outside.sqlite3"
+        with self.assertRaises(ValueError):
+            SQLiteGrantLedger(unsafe)
+
     def test_ledger_rejects_symlinked_parent_directory(self):
         real_parent = Path(self.tmp.name) / "real-parent"
         real_parent.mkdir(mode=0o700)
