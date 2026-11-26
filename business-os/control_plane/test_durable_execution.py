@@ -166,6 +166,14 @@ class DurableExecutionTests(unittest.TestCase):
         self.assertEqual(final["state"], "SUCCEEDED")
         self.assertEqual(restarted_adapter.call_count, 0)
 
+    def test_persistent_kill_switch_blocks_destination_acceptance(self):
+        from durable_execution import SQLiteMockAdapter
+        adapter = SQLiteMockAdapter(self.ledger)
+        self.ledger.activate_kill_switch()
+        with self.assertRaises(GrantError):
+            adapter.execute(idempotency_key="blocked-key", operation={"amount": 1})
+        self.assertIsNone(self.ledger.lookup_mock_destination_receipt("blocked-key"))
+
     def test_persistent_destination_rejects_idempotency_key_payload_swap(self):
         from durable_execution import SQLiteMockAdapter
         adapter = SQLiteMockAdapter(self.ledger)
