@@ -102,6 +102,9 @@ class SQLiteGrantLedger:
                 value TEXT NOT NULL
             )""")
             conn.execute("INSERT OR IGNORE INTO control_state(key, value) VALUES ('kill_switch', 'false')")
+            conn.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS execution_intents_one_per_task ON execution_intents(task_id)"
+            )
             conn.execute("""CREATE TABLE IF NOT EXISTS execution_events (
                 sequence INTEGER PRIMARY KEY AUTOINCREMENT,
                 intent_id TEXT NOT NULL,
