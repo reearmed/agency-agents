@@ -4,7 +4,7 @@
 **Repository:** https://github.com/reearmed/agency-agents  
 **Working branch:** `business-os/blueprint`  
 **Base branch:** `main`  
-**Status:** design and repository foundation only; NOT deployed or running.
+**Status:** repository foundation plus local safety prototype; NOT deployed or running.
 
 ## Start here in a new chat
 
@@ -49,10 +49,10 @@ The user wants useful autonomous work, not just an architecture document. Keep m
 
 A branch named `business-os/blueprint` was created from `main`. The latest verified comparison before this handoff showed:
 - branch status: ahead;
-- ahead by 56 commits;
-- behind by 0 commits;
-- 38 changed files;
-- all changed paths are within `business-os/` or the intended helper `scripts/bootstrap-business-os-openclaw.sh`.
+- ahead by 73 commits;
+- behind by 2 commits (main contains an add/delete correction pair; its file tree was restored to the prior state);
+- 48 changed paths;
+- changed paths are within `business-os/`, `scripts/bootstrap-business-os-openclaw.sh`, and the dedicated test-only workflow `.github/workflows/business-os-safety-tests.yml`.
 
 Verify this comparison again before acting; it may have changed.
 
@@ -66,9 +66,13 @@ Verify this comparison again before acting; it may have changed.
 - Hosting decision recommending a Toronto-region DigitalOcean VPS option (previous estimate US$48/month for 4 vCPU / 8 GiB / 160 GiB; recheck current price and terms before any purchase).
 - Guarded autonomy policy, task contract, deployment runbook and activation blockers.
 - Control-plane specification, exact-payload execution protocol, security acceptance tests, incident-response runbook and implementation backlog.
+- Added strict task/approval JSON Schemas and valid/invalid fixtures under `business-os/contracts/`.
+- Added local-only in-memory control-plane primitives and unit tests under `business-os/control_plane/` for canonical payload hashing, approval binding, state transitions, idempotency, budget caps and fail-closed audit behavior.
+- Added `.github/workflows/business-os-safety-tests.yml` to validate schemas/fixtures and run unit tests on the feature branch.
+- Tightened the OpenClaw example using current documentation for sandbox backend controls, `tools.agentToAgent`, session visibility, and per-agent subagent allowlists.
 
 ### Important implementation distinction
-The control-plane and execution documents are specifications, not a running enforcement service. The database schema is a reference schema, not an applied migration. The OpenClaw config is an example, not installed or runtime-validated. The bootstrap script has not been run on the user's Mac. No server, database, model provider, API credentials, schedule or integrations have been provisioned.
+The local `business-os/control_plane/` code is a test prototype only, not a running enforcement service. It uses in-memory state, has no authenticated identity service or external adapters, and is not safe for production or multi-process execution. CI has been configured, but its result must be verified before claiming tests pass. The control-plane and execution documents remain specifications for the production implementation. The database schema is a reference schema, not an applied migration. The OpenClaw config is an example, not installed or runtime-validated. The bootstrap script has not been run on the user's Mac. No server, database, model provider, API credentials, schedule or integrations have been provisioned.
 
 ## Runtime and model decisions
 
@@ -94,11 +98,10 @@ The control-plane and execution documents are specifications, not a running enfo
 1. Reinspect branch, compare against `main`, and inspect all current files.
 2. Check OpenClaw example config against the currently documented schema/version. Fix invalid or unsupported fields in the example, but do not install it.
 3. Review bootstrap script for macOS compatibility, symlink/path safety, idempotency and no-overwrite behavior. Run static checks in an isolated environment if possible; do not run `--apply` on the user's Mac.
-4. Add machine-checkable JSON Schemas for task envelopes and approval envelopes, plus example valid/invalid fixtures.
-5. Add a local-only reference implementation or interface contract for canonical payload hashing, state transitions, idempotency and approval validation. Keep all adapters mocked; no real external side effects.
-6. Add automated tests for payload mutation, recipient/target changes, expiry, replay, race conditions, kill-switch, budget cap, audit failure and adapter timeout reconciliation.
-7. Add CI workflow that runs only lint/schema/unit tests on the feature branch. Do not create secrets or deploy workflows.
-8. Update README/backlog with verified implementation status and evidence.
+4. Verify the GitHub Actions workflow run and inspect logs. Do not report tests passing until a successful run is confirmed.
+5. Add adapter-timeout reconciliation tests and strengthen transactional semantics in a durable isolated implementation only after infrastructure is approved.
+6. Complete OpenClaw live-schema validation with the pinned binary and finish bootstrap portability/security tests.
+7. Continue updating the README/backlog/handoff with verified test evidence.
 
 ### Phase 2: infrastructure choice (requires user decision / approval)
 1. Compare isolated hosting options, Canada region availability, security, backup, total cost and operational burden.
