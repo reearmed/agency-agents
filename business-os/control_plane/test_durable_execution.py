@@ -1,5 +1,6 @@
 import json
 import sqlite3
+import stat
 import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
@@ -305,7 +306,7 @@ class DurableExecutionTests(unittest.TestCase):
         self.ledger.activate_kill_switch()
         backup = Path(self.temp.name) / "backup.sqlite3"
         created = self.ledger.backup_to(backup)
-        restored = __import__("approval_grants").SQLiteGrantLedger(created)
+        restored = SQLiteGrantLedger(created)
         intent = restored.get_intent(result["intent_id"])
         self.assertEqual(intent["state"], "VERIFY_PENDING")
         self.assertTrue(restored.kill_switch_active())
