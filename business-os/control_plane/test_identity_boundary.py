@@ -98,6 +98,17 @@ class IdentityBoundaryTests(unittest.TestCase):
         with self.assertRaises(IdentityError):
             require_scope({"subject": "operator-1"}, "business-os:read")
 
+    def test_unrecognized_scopes_and_roles_are_not_granted(self):
+        self.token_claims = claims(
+            scope="business-os:read billing:admin",
+            roles=["business-os:human-approver", "system-admin"],
+        )
+        principal = self.authenticate()
+        self.assertEqual(principal.scopes, frozenset({"business-os:read"}))
+        self.assertEqual(principal.roles, frozenset({"business-os:human-approver"}))
+        with self.assertRaises(IdentityError):
+            require_scope(principal, "billing:admin")
+
     def test_human_approval_callback_requires_subject_scope_and_role(self):
         principal = self.authenticate()
         self.assertTrue(human_approver_identity_verifier("operator-1", principal))
