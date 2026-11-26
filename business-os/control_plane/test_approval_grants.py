@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 import tempfile
 from pathlib import Path
 import sqlite3
+import stat
 import unittest
 
 from approval_grants import (
@@ -93,6 +94,15 @@ class ApprovalGrantTests(unittest.TestCase):
         token = self.issue(ttl_seconds=30)
         with self.assertRaises(GrantError):
             self.consume(token, now=self.now + timedelta(seconds=30))
+
+    def test_naive_verification_clock_rejected(self):
+        token = self.issue()
+        with self.assertRaises(GrantError):
+            self.consume(token, now=datetime(2026, 11, 26, 15, 1))
+
+    def test_ledger_database_file_is_private(self):
+        mode = stat.S_IMODE(Path(self.ledger.path).stat().st_mode)
+        self.assertEqual(mode, 0o600)
 
     def test_future_issued_grant_rejected(self):
         token = self.issue(now=self.now + timedelta(seconds=1))
