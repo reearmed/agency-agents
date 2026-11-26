@@ -70,6 +70,9 @@ class LocalLedgerCliTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertTrue(json.loads(output)["kill_switch_active"])
         self.assertTrue(SQLiteGrantLedger(db).kill_switch_active())
+        code, output, _ = self.run_cli("verify", "--db", str(db))
+        self.assertEqual(code, 0)
+        self.assertTrue(json.loads(output)["kill_switch_active"])
         with self.assertRaises(SystemExit):
             main(["clear-kill-switch", "--db", str(db)])
 
