@@ -624,6 +624,32 @@ class DurableExecutionTests(unittest.TestCase):
             conn.close()
         self.assertTrue(self.ledger.verify_execution_integrity())
 
+    def test_privileged_mock_destination_receipt_tampering_is_detected(self):
+        self.submit()
+        conn = sqlite3.connect(self.db)
+        try:
+            conn.execute("DROP TRIGGER mock_receipts_no_update")
+            conn.execute(
+                "UPDATE mock_destination_receipts SET operation_sha256=? WHERE idempotency_key=?",
+                ("0" * 64, "idem-1"),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        self.assertFalse(self.ledger.verify_execution_integrity())
+
+    def test_successful_intent_requires_persistent_destination_receipt(self):
+        result = self.submit()
+        self.assertEqual(self.gateway.reconcile(result["intent_id"])["state"], "SUCCEEDED")
+        conn = sqlite3.connect(self.db)
+        try:
+            conn.execute("DROP TRIGGER mock_receipts_no_delete")
+            conn.execute("DELETE FROM mock_destination_receipts WHERE idempotency_key='idem-1'")
+            conn.commit()
+        finally:
+            conn.close()
+        self.assertFalse(self.ledger.verify_execution_integrity())
+
     def test_privileged_execution_audit_tampering_is_detected(self):
         self.submit()
         conn = sqlite3.connect(self.db)
