@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "status": "blueprint",
+  "runbooks": [
+    {
+      "id": "daily-executive-brief",
+      "schedule": "proposed: weekdays 08:00 America/Toronto",
+      "enabled": false,
+      "agents": ["chief-orchestrator","portfolio-manager","finance-unit-economics","reality-evidence-reviewer"],
+      "inputs": ["approved aggregate analytics","business_os task and cost records"],
+      "outputs": ["executive brief","approval queue","risk and spend exceptions"],
+      "risk": "R1"
+    },
+    {
+      "id": "norevyo-growth-review",
+      "schedule": "proposed: weekly",
+      "enabled": false,
+      "agents": ["norevyo-growth-lead","opportunity-researcher","portfolio-manager","reality-evidence-reviewer"],
+      "inputs": ["approved aggregate product metrics","public competitor sources"],
+      "outputs": ["funnel diagnosis","ranked experiment cards"],
+      "risk": "R1"
+    },
+    {
+      "id": "services-offer-validation",
+      "schedule": "manual trigger; weekly research batch",
+      "enabled": false,
+      "agents": ["opportunity-researcher","services-revenue-lead","finance-unit-economics","security-privacy-gatekeeper"],
+      "inputs": ["public market sources","approved cost assumptions"],
+      "outputs": ["ICP brief","offer brief","economics model","validation plan"],
+      "risk": "R1"
+    },
+    {
+      "id": "content-draft-batch",
+      "schedule": "manual trigger",
+      "enabled": false,
+      "agents": ["opportunity-researcher","content-distribution","reality-evidence-reviewer"],
+      "inputs": ["approved offer","verified source material"],
+      "outputs": ["channel-specific drafts","claims review","publication checklist"],
+      "risk": "R1"
+    },
+    {
+      "id": "weekly-portfolio-review",
+      "schedule": "proposed: Friday 16:00 America/Toronto",
+      "enabled": false,
+      "agents": ["chief-orchestrator","portfolio-manager","finance-unit-economics","reality-evidence-reviewer"],
+      "inputs": ["completed task records","verified revenue and cost actuals","experiment results"],
+      "outputs": ["continue/change/stop decisions for operator"],
+      "risk": "R1"
+    }
+  ]
+}
