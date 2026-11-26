@@ -424,11 +424,14 @@ class DurableExecutionTests(unittest.TestCase):
             "_budget": {"reservation_id": "res-release", "amount_minor": 300, "currency": "USD", "period": "2026-11"},
         }
         token = self.issue(payload=payload, task_id="budget-release", key="budget-release-key")
-        self.gateway.submit(
+        self.gateway.adapter = SQLiteMockAdapter(self.ledger, fail_before_commit=True)
+        result = self.gateway.submit(
             token, task_id="budget-release", payload=payload, adapter_name="mock",
             action="create", target="sandbox-object", idempotency_key="budget-release-key",
             requester_id="agent-1",
         )
+        self.assertEqual(result["state"], "UNKNOWN")
+        self.assertEqual(self.gateway.reconcile(result["intent_id"])["state"], "FAILED")
         with self.assertRaises(GrantError):
             self.ledger.release_budget("budget-release", verified_no_effect=False)
         self.ledger.release_budget("budget-release", verified_no_effect=True)
