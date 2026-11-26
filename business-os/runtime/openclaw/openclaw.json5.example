@@ -27,7 +27,16 @@
     sessions: { visibility: "tree" },
     agentToAgent: { enabled: false },
     subagents: { tools: { deny: ["exec", "process", "message", "browser", "gateway", "cron", "plugins"] } },
-    elevated: { enabled: false }
+    elevated: { enabled: false },
+    sandbox: {
+      tools: {
+        allow: [
+          "read", "write", "web_search", "web_fetch",
+          "sessions_spawn", "sessions_yield", "sessions_list", "sessions_history",
+          "memory_search", "memory_get"
+        ]
+      }
+    }
   },
   cron: { enabled: false },
   commands: { restart: false },
