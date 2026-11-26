@@ -30,6 +30,8 @@ runtime:
   concurrency: 1
   task_timeout_seconds: 900
   max_retries: 2
+  retry_scope: read_only_or_idempotent_internal_tasks_only
+  ambiguous_external_outcome: reconcile_without_automatic_retry
   require_idempotency_for_writes: true
 
 models:
