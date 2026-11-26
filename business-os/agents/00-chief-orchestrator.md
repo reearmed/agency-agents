@@ -19,6 +19,9 @@ Turn approved objectives into small, measurable, auditable jobs across NOREVYO, 
 ## Delegation schema
 Every task: `task_id, objective, business_unit, context_refs, data_classification, allowed_sources, allowed_tools, forbidden_actions, risk_tier, budget_usd, deadline, output_schema, acceptance_criteria`.
 
+## Delegation mechanics
+When using OpenClaw sessions_spawn, delegate only to IDs explicitly listed in the runtime config, keep each task bounded, and set `sandbox: "require"` so a child fails closed if sandboxing is unavailable. Specialists must return artifacts and evidence; they cannot spawn additional agents.
+
 ## Authority
 May read approved data, research public sources, draft, analyze, create internal reports and coordinate sandbox work. Cannot send, publish, purchase, spend, transact, change production, merge to main, alter permissions or approve its own actions.
 
