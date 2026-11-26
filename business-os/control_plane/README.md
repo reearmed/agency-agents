@@ -53,13 +53,18 @@ distributed one-use grant service; privileged database operators can still alter
 expiry, requester, payload hash and exact adapter/action/target/idempotency
 scope are validated before the ledger atomically inserts both the consumed
 grant and immutable execution intent in one `BEGIN IMMEDIATE` transaction.
-The intent includes canonical operation JSON and SHA-256.
+The intent includes canonical operation JSON and SHA-256. A unique task constraint
+and idempotency-key constraint prevent duplicate execution intents. Immutable
+proposal fields cannot be updated or deleted through ordinary SQL. The
+`verify_execution_integrity()` check compares current intent fields with the
+original creation event, and the audit-chain verifier detects event tampering.
 
 The ledger also has a persistent fail-closed kill switch: it blocks new approval grants, grant+intent creation, worker claims and synthetic destination acceptance, and remains engaged if its audit write fails. The durable worker checks the caller-supplied kill-switch callback before and after claiming work. The worker claims a READY intent with a bounded lease. If a process crashes
 before claiming it, another worker can recover READY work. Once claimed, a
 dispatch is never automatically repeated. A timeout or exception becomes
-UNKNOWN; an expired dispatch lease also becomes UNKNOWN. Both require
-destination lookup and separate verifier reconciliation. Successful mock
+UNKNOWN; an expired dispatch lease also becomes UNKNOWN. Bulk stale-lease
+recovery exposes those records for destination lookup and separate verifier
+reconciliation. Successful mock
 dispatches enter VERIFY_PENDING until reconciliation. Intent transitions
 are recorded in an append-only hash-chained event table.
 
@@ -71,13 +76,23 @@ gateway restarts, but it does not make a remote side effect exactly-once: a
 real destination must provide durable idempotency and authoritative lookup
 semantics. The older `execution_gateway.py` remains an in-memory test harness.
 
+## Private local backup
+
+`SQLiteGrantLedger.backup_to(path)` uses SQLite's online backup API to create
+a new private backup file. It refuses to overwrite an existing destination,
+checks SQLite integrity and foreign keys, opens the backup as a new ledger,
+and verifies the execution audit chain and immutable intent records. The
+backup file is created with mode 0600 in a private directory. This is a
+manual local backup helper only; there is no scheduler, off-host copy,
+retention policy or automated restore drill.
+
 ## Important limitations
 
 This is not a production control plane:
 
 - There is no authenticated network API, production identity provider, session validation, role management, key rotation, revocation service or independent verifier identity. The injected identity callback is a test seam, not proof of production authentication.
 - Evidence SHA-256 values are produced by the mock verifier; no external destination evidence is fetched or independently validated.
-- There is no real adapter, hosted queue, multi-host coordination, budget reconciliation/refund service, alerting, backup/restore automation or independently administered emergency control.
+- There is no real adapter, hosted queue, multi-host coordination, budget reconciliation/refund service, alerting, off-host backup automation or independently administered emergency control. The local manual backup helper is not a disaster-recovery service.
 - SQLite is a single-host prototype. WAL and transactional locking do not make it a distributed coordination service.
 - Audit triggers and the hash chain are tamper-evident, not tamper-proof against a privileged database operator who can rewrite the file or remove triggers.
 - The local persistent kill switch is stored in the same SQLite database and is not independently administered or distributed. A caller-supplied callback is also checked by the gateway; neither mechanism replaces a separately hosted emergency control.
