@@ -18,6 +18,20 @@ The local `control_plane/identity_boundary.py` component provides:
 
 The component deliberately does not parse or verify JWT signatures itself. The injected verifier must be backed by a real identity provider and must validate the signature using a pinned algorithm allowlist, trusted issuer metadata/JWKS, key rotation and revocation policy. A test lambda or caller-provided claims object is not an authenticator.
 
+## Cryptographic Auth0 verifier component
+
+`control_plane/auth0_jwt_verifier.py` now provides a concrete RS256 verifier backed by **PyJWT[crypto] 2.15.1**, pinned in `requirements-auth.txt`. It:
+- accepts only an operator-configured HTTPS issuer origin and API audience;
+- derives the JWKS URL from that exact issuer; no token or request can select a key URL;
+- pins the accepted JWT algorithm to RS256 and requires a bounded `kid`;
+- uses PyJWT's JWKS client with a 5-second fetch timeout, 5-minute JWKS cache and bounded 16-key signing-key cache;
+- requires and cryptographically validates issuer, audience, expiry, issued-at, subject and token ID;
+- rejects unsigned tokens, algorithm confusion, wrong signatures, wrong issuer/audience and malformed or oversized tokens.
+
+PyJWT 2.15.1 is selected because its release includes the 2.14.0 security fixes for JWKS redirects and key handling, and the 2.15.0 parser-hardening fix. See [PyJWT 2.15.1 release metadata](https://pypi.org/project/PyJWT/2.15.1/), [PyJWT security changelog](https://pyjwt.readthedocs.io/en/stable/changelog.html) and [JWKS redirect advisory](https://github.com/advisories/GHSA-9v7f-9g4p-ffgj). The exact dependency must still be included in a future fully hash-locked deployment lockfile and scanned at release time.
+
+Offline tests generate RSA keys and exercise real signature verification; they do not make network requests. The verifier is now suitable to inject into `IdentityBoundary`, but no Auth0 tenant, live JWKS fetch, API server, TLS endpoint, secret store, revocation integration or deployment exists. This does not close the production-authentication blocker.
+
 ## Expected token claims
 
 | Claim | Requirement |
@@ -29,7 +43,7 @@ The component deliberately does not parse or verify JWT signatures itself. The i
 | `iat`, `exp` | Finite numeric timestamps; expiry and maximum lifetime enforced |
 | `nbf` | Optional numeric not-before timestamp |
 | `scope` | Space-delimited OAuth scopes |
-| `roles` | Array of role strings |
+| `roles` | Array of role strings from the configured claim; Auth0 uses a namespaced custom claim, e.g. `https://norevyo.com/claims/roles` |
 
 The OpenAPI route scope/role extensions are tested against the same allowlist so a new route cannot silently introduce an unsupported permission. The internal independent-verifier service uses the separate `business-os:verification:record` scope and `business-os:independent-verifier` role; its subject must differ from requester and executor. The human approval callback requires all three: the verified principal subject matches the approver ID, scope includes `business-os:approval:decide`, and role includes `business-os:human-approver`. Agent identities cannot satisfy the human role by setting a request field.
 
