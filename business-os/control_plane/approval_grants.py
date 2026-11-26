@@ -83,6 +83,11 @@ class SQLiteGrantLedger:
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )""")
+            conn.execute("""CREATE TABLE IF NOT EXISTS control_state (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            )""")
+            conn.execute("INSERT OR IGNORE INTO control_state(key, value) VALUES ('kill_switch', 'false')")
             conn.execute("""CREATE TABLE IF NOT EXISTS execution_events (
                 sequence INTEGER PRIMARY KEY AUTOINCREMENT,
                 intent_id TEXT NOT NULL,
@@ -195,6 +200,11 @@ class SQLiteGrantLedger:
         conn = self._connect()
         try:
             conn.execute("BEGIN IMMEDIATE")
+            switch = conn.execute(
+                "SELECT value FROM control_state WHERE key='kill_switch'"
+            ).fetchone()
+            if switch and switch["value"] == "true":
+                raise GrantError("persistent kill switch active; intent creation denied")
             conn.execute(
                 "INSERT INTO consumed_grants(grant_id, grant_sha256, consumed_at) VALUES (?, ?, ?)",
                 (grant_id, grant_sha256, now),
@@ -232,6 +242,11 @@ class SQLiteGrantLedger:
         conn = self._connect()
         try:
             conn.execute("BEGIN IMMEDIATE")
+            switch = conn.execute(
+                "SELECT value FROM control_state WHERE key='kill_switch'"
+            ).fetchone()
+            if switch and switch["value"] == "true":
+                raise GrantError("persistent kill switch active; worker claim denied")
             row = conn.execute(
                 "SELECT * FROM execution_intents WHERE intent_id = ?", (intent_id,)
             ).fetchone()
@@ -303,6 +318,41 @@ class SQLiteGrantLedger:
             if conn.in_transaction:
                 conn.rollback()
             raise
+        finally:
+            conn.close()
+
+    def activate_kill_switch(self) -> None:
+        """Persist an irreversible-by-API emergency stop; audit failure cannot clear it."""
+        conn = self._connect()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            conn.execute("UPDATE control_state SET value='true' WHERE key='kill_switch'")
+            conn.commit()
+        except Exception:
+            if conn.in_transaction:
+                conn.rollback()
+            raise
+        finally:
+            conn.close()
+        audit = self._connect()
+        try:
+            audit.execute("BEGIN IMMEDIATE")
+            self._append_execution_event(audit, "__system__", "kill_switch_activated")
+            audit.commit()
+        except Exception:
+            if audit.in_transaction:
+                audit.rollback()
+            raise
+        finally:
+            audit.close()
+
+    def kill_switch_active(self) -> bool:
+        conn = self._connect()
+        try:
+            row = conn.execute(
+                "SELECT value FROM control_state WHERE key='kill_switch'"
+            ).fetchone()
+            return bool(row and row["value"] == "true")
         finally:
             conn.close()
 
