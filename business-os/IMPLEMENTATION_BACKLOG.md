@@ -25,7 +25,7 @@ Status: **local safety prototype added; production-grade control plane and runti
 - Unit tests for proposed-payload substitution, key mutation, target swap, expiry, replay, human-approval gate, terminal-state bypass, unknown-outcome reconciliation, concurrency, kill switch, budget and audit failure.
 - Feature-branch CI workflow to validate schemas/fixtures and run the tests.
 
-These components are deliberately in-memory and have no external adapters. They are not production-ready. The CI result must be checked after the workflow runs; do not treat file creation as a passing test.
+These components are deliberately in-memory and have no external adapters. They are not production-ready. An isolated local mirror of the fetched source passed 21/21 Python unit tests and all four schema/fixture cases. The GitHub Actions run result is still unconfirmed; do not infer a hosted CI pass from the local checks.
 
 ## Release 1 — internal research and NOREVYO improvement (P1)
 
