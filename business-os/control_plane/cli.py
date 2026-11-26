@@ -35,6 +35,11 @@ def build_parser() -> argparse.ArgumentParser:
     configure.add_argument("--per-task-limit-minor", required=True, type=int)
     configure.add_argument("--currency", required=True)
 
+    intents = sub.add_parser("intents", help="List safe execution summaries without payloads")
+    intents.add_argument("--db", required=True)
+    intents.add_argument("--state", choices=["READY", "DISPATCHING", "VERIFY_PENDING", "UNKNOWN", "SUCCEEDED", "FAILED"])
+    intents.add_argument("--limit", type=int, default=100)
+
     usage = sub.add_parser("budget-usage", help="Read reserved and settled budget totals")
     usage.add_argument("--db", required=True)
     usage.add_argument("--period", required=True)
@@ -67,7 +72,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 result = ledger.verify_all()
                 print(json.dumps(result, sort_keys=True))
                 return 0 if result["ok"] else 2
-            if args.command == "budget-usage":
+            if args.command == "intents":
+                result = ledger.list_intents(state=args.state, limit=args.limit)
+            elif args.command == "budget-usage":
                 result = ledger.budget_usage(args.period)
             elif args.command == "activate-kill-switch":
                 ledger.activate_kill_switch()
