@@ -4,7 +4,7 @@ This repository branch contains the design and agent instructions. It does not i
 
 ## External prerequisites
 
-1. **Runtime selection:** choose one compatible always-on agent runtime and verify its isolation, job execution, tool permissions, audit and recovery capabilities.
+1. **Runtime validation:** OpenClaw is the proposed first runtime; install it in an isolated environment and validate the pinned release, sandbox backend, tool permissions, audit and recovery capabilities before enabling jobs.
 2. **Hosting:** provision an isolated non-production worker environment. The owner's Mac can be used for development, but cannot guarantee 24/7 uptime when sleeping or offline.
 3. **Database and queue:** provision a new Business OS database and durable queue. Do not reuse NOREVYO production Supabase or credentials.
 4. **Model provider:** choose a reasoning model and fallback, set token ceilings and provider spend limits. A small local model may classify or route tasks but must not be the sole strategic reasoning model.
@@ -18,7 +18,7 @@ This repository branch contains the design and agent instructions. It does not i
 ## Current state
 
 - Repository blueprint: created on `business-os/blueprint`.
-- Runtime: not selected or provisioned.
+- Runtime: OpenClaw proposed; not installed or provisioned.
 - Database/queue: not provisioned.
 - Integrations/credentials: not connected or authorized by this blueprint.
 - Schedules: disabled.
