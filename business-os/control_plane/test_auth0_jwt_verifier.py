@@ -88,6 +88,7 @@ class Auth0JWTVerifierTests(unittest.TestCase):
             {"iat": NOW + 600},
             {"jti": None},
             {"sub": None},
+            {"client_id": None},
             {"aud": None},
         )
         for changed in cases:
@@ -158,6 +159,18 @@ class Auth0JWTVerifierTests(unittest.TestCase):
                            headers={"kid": "test-key-1", "typ": "JWT"})
         with self.assertRaises(Auth0JWTVerificationError):
             self.verifier(token)
+
+
+    def test_rejects_missing_kid_and_wrong_access_token_type(self):
+        claims = {
+            "iss": ISSUER, "sub": "operator-1", "aud": AUDIENCE,
+            "jti": "id", "client_id": "client-1", "iat": NOW, "exp": NOW + 60,
+        }
+        for headers in ({"typ": "at+jwt"}, {"kid": "test-key-1", "typ": "JWT"}):
+            token = jwt.encode(claims, self.private_key, algorithm="RS256", headers=headers)
+            with self.subTest(headers=headers), self.assertRaises(Auth0JWTVerificationError):
+                self.verifier(token)
+        self.assertEqual(self.jwks.calls, 0)
 
     def test_rejects_invalid_verifier_policy_parameters(self):
         with self.assertRaises(ValueError):
