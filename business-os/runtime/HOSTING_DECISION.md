@@ -2,12 +2,12 @@
 
 ## Recommendation
 
-Use a dedicated DigitalOcean Basic Droplet in Toronto (TOR1) for the first isolated OpenClaw gateway pilot, with external model API calls and one active task at a time. Do not run a local LLM on this VM in phase one.
+Use a dedicated DigitalOcean Basic Droplet in Toronto (TOR1) for the first isolated OpenClaw gateway pilot, with external model API calls and one active task at a time. Start with 8 GiB RAM to leave headroom for the Gateway plus isolated Docker agent sandboxes; do not run a local LLM on this VM in phase one.
 
 Why:
 - OpenClaw documents DigitalOcean as a VPS option and recommends keeping the Gateway on loopback, accessing it through SSH or Tailscale, and backing up state/workspaces.
 - DigitalOcean confirms Basic Droplets are available in Toronto (TOR1).
-- The current published Basic plan for 2 vCPU / 4 GiB RAM / 80 GiB SSD is US$24/month. This is a planning estimate, not a quote at checkout.
+- The current published Basic plan for 4 vCPU / 8 GiB RAM / 160 GiB SSD is US$48/month. This is a planning estimate, not a quote at checkout.
 - OpenClaw's Docker guide says prebuilt images avoid the 6 GB RAM requirement for local source image builds. Use an official pinned prebuilt image and confirm the Docker sandbox workload fits before scaling concurrency.
 
 ## Initial footprint
@@ -15,8 +15,8 @@ Why:
 | Item | Proposed setting |
 |---|---|
 | Provider / region | DigitalOcean / Toronto TOR1 |
-| VM | Basic 2 vCPU, 4 GiB RAM, 80 GiB SSD |
-| VM estimate | US$24/month before tax and optional extras |
+| VM | Basic 4 vCPU, 8 GiB RAM, 160 GiB SSD |
+| VM estimate | US$48/month before tax and optional extras |
 | Runtime | OpenClaw Gateway, pinned official release/image |
 | Model | External reasoning API; provider and exact model still need selection/authentication |
 | Local model | Do not host Qwen3-0.6B on this VM; reserve local model for lightweight routing only |
@@ -26,7 +26,7 @@ Why:
 | Channels | None in first pilot |
 | Schedules | Disabled until approval and cost controls are tested |
 
-If Docker sandboxing, worker load or model sidecars exceed available memory, move to the 8 GiB Basic plan (published at US$48/month) rather than weakening isolation.
+A smaller 4 GiB Basic plan is published at US$24/month, but is not the recommended starting point for a multi-agent sandboxed pilot. If measured load exceeds 8 GiB, scale up rather than weakening isolation.
 
 ## Costs not included
 
