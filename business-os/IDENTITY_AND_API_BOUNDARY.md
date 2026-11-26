@@ -35,7 +35,32 @@ The OpenAPI route scope/role extensions are tested against the same allowlist so
 
 ## Machine-readable API contract
 
-`business-os/api/openapi.yaml` defines the intended authenticated API surface. It includes task proposals, safe task reads, internal artifact staging, approval requests/decisions, immutable period-budget configuration and kill-switch activation. It intentionally exposes no execution or adapter route. The API contract has static CI checks for required bearer security, route scopes, sensitive-operation roles, strict request schemas and unique operation IDs. The server URL is a placeholder and no server is deployed.\n\n## Minimum API middleware sequence
+`business-os/api/openapi.yaml` defines the intended authenticated API surface. It includes task proposals, safe task reads, internal artifact staging, approval requests/decisions, immutable period-budget configuration and kill-switch activation. It intentionally exposes no execution or adapter route. The API contract has static CI checks for required bearer security, route scopes, sensitive-operation roles, strict request schemas and unique operation IDs. The server URL is a placeholder and no server is deployed.\n\n## Candidate identity provider (not provisioned)
+
+**Preferred managed candidate: Auth0 Public Cloud Canada, Essentials.** Auth0 documents a Canadian public-cloud region, selectable when creating a tenant; the resulting issuer uses the `.ca.auth0.com` domain. The current pricing page lists Essentials at **US$35/month**, up to 500 monthly active users, with Pro MFA and role-based access control. The pricing comparison lists 1,000 machine-to-machine authentications on Essentials, but the unit/quota semantics and expected service-token refresh rate must be confirmed before relying on it. Professional is listed at US$240/month and includes an M2M-token add-on; do not upgrade without a separate cost review.
+
+Why this is the leading candidate:
+- Canadian public-cloud tenant region is explicitly available, supporting a Canadian data-residency target.
+- Essentials includes MFA and RBAC; Auth0 Free's higher 25,000-MAU allowance does not include Pro MFA.
+- Auth0 supports the OIDC client-credentials flow for backend service identities. Cache short-lived service tokens securely and avoid a token request per agent tool call.
+- The API's issuer/audience, scopes and role claims can be pinned to the selected tenant and resource server.
+
+Alternatives reviewed:
+- ZITADEL Cloud Free is US$0 but its listed residency options are EU, US, Switzerland and Australia—not Canada. Self-hosted ZITADEL can run in a chosen Canadian region, but adds deployment, patching, backup and availability responsibility.
+- Clerk's current security page says regional data residency is not offered and data is US-hosted; it is not suitable if Canadian residency is a hard requirement.
+- WorkOS AuthKit advertises a free tier, but its security review says customer data is hosted in AWS us-east-1 with backups in us-west-2; not suitable for a strict Canadian-only data boundary.
+
+This is a research recommendation, not a selected provider or purchase. Before selection, confirm Canadian tenant availability for the exact plan, DPA/subprocessors, backup/log location, M2M quotas, token lifetime/rotation, revocation behavior and any restrictions on machine identities. No tenant has been created and no credentials are stored.
+
+Sources:
+- [Auth0 pricing](https://auth0.com/pricing)
+- [Auth0 Public Cloud in Canada announcement](https://auth0.com/changelog?version=v202631)
+- [Auth0 Client Credentials Flow](https://auth0.com/docs/get-started/authentication-and-authorization-flow/client-credentials-flow)
+- [ZITADEL pricing and cloud residency](https://zitadel.com/pricing)
+- [Clerk security and residency](https://clerk.com/security)
+- [WorkOS security review and hosting regions](https://workos.com/blog/workos-security-review)
+
+## Minimum API middleware sequence
 
 1. Enforce TLS at the edge; reject oversized headers and request bodies.
 2. Extract one Bearer token and validate it through the trusted identity provider verifier.
