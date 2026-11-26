@@ -61,6 +61,27 @@ class SQLiteGrantLedger:
                 grant_sha256 TEXT NOT NULL,
                 consumed_at TEXT NOT NULL
             )""")
+            conn.execute("""CREATE TABLE IF NOT EXISTS execution_intents (
+                intent_id TEXT PRIMARY KEY,
+                grant_id TEXT NOT NULL UNIQUE REFERENCES consumed_grants(grant_id),
+                task_id TEXT NOT NULL,
+                idempotency_key TEXT NOT NULL UNIQUE,
+                operation_json TEXT NOT NULL,
+                operation_sha256 TEXT NOT NULL,
+                adapter TEXT NOT NULL,
+                action TEXT NOT NULL,
+                target TEXT NOT NULL,
+                state TEXT NOT NULL CHECK(state IN
+                    ('READY', 'DISPATCHING', 'VERIFY_PENDING', 'UNKNOWN', 'SUCCEEDED', 'FAILED')),
+                lease_owner TEXT,
+                lease_expires_at TEXT,
+                attempt_count INTEGER NOT NULL DEFAULT 0,
+                receipt_json TEXT,
+                evidence_sha256 TEXT,
+                last_error TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )""")
             conn.executescript("""
                 CREATE TRIGGER IF NOT EXISTS consumed_grants_no_update
                 BEFORE UPDATE ON consumed_grants
@@ -96,6 +117,138 @@ class SQLiteGrantLedger:
         except Exception:
             conn.rollback()
             raise
+        finally:
+            conn.close()
+
+    def consume_with_intent(self, grant_id: str, grant_sha256: str, intent: Mapping[str, Any]) -> None:
+        """Consume a grant and persist its immutable execution intent in one transaction."""
+        required = {
+            "intent_id", "task_id", "idempotency_key", "operation_json",
+            "operation_sha256", "adapter", "action", "target",
+        }
+        if not isinstance(intent, Mapping) or set(intent) != required:
+            raise GrantError("execution intent schema invalid")
+        now = datetime.now(timezone.utc).isoformat()
+        conn = self._connect()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            conn.execute(
+                "INSERT INTO consumed_grants(grant_id, grant_sha256, consumed_at) VALUES (?, ?, ?)",
+                (grant_id, grant_sha256, now),
+            )
+            conn.execute(
+                """INSERT INTO execution_intents
+                   (intent_id, grant_id, task_id, idempotency_key, operation_json,
+                    operation_sha256, adapter, action, target, state, attempt_count,
+                    created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?)""",
+                (intent["intent_id"], grant_id, intent["task_id"], intent["idempotency_key"],
+                 intent["operation_json"], intent["operation_sha256"], intent["adapter"],
+                 intent["action"], intent["target"], now, now),
+            )
+            conn.commit()
+        except sqlite3.IntegrityError as exc:
+            conn.rollback()
+            raise GrantError("grant or execution intent already consumed/reserved") from exc
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+    def claim_intent(self, intent_id: str, worker_id: str, lease_seconds: int = 30) -> Mapping[str, Any]:
+        """Claim READY work once; expired DISPATCHING work becomes UNKNOWN, never re-dispatched."""
+        if not worker_id or not isinstance(lease_seconds, int) or not 1 <= lease_seconds <= 300:
+            raise GrantError("valid worker identity and bounded lease are required")
+        now = datetime.now(timezone.utc)
+        expires = (now + timedelta(seconds=lease_seconds)).isoformat()
+        conn = self._connect()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                "SELECT * FROM execution_intents WHERE intent_id = ?", (intent_id,)
+            ).fetchone()
+            if not row:
+                raise GrantError("unknown execution intent")
+            if row["state"] == "DISPATCHING" and row["lease_expires_at"]:
+                old_expiry = datetime.fromisoformat(row["lease_expires_at"])
+                if old_expiry <= now:
+                    conn.execute(
+                        """UPDATE execution_intents SET state='UNKNOWN', lease_owner=NULL,
+                           lease_expires_at=NULL, last_error='worker lease expired; destination reconciliation required',
+                           updated_at=? WHERE intent_id=? AND state='DISPATCHING'""",
+                        (now.isoformat(), intent_id),
+                    )
+                    conn.commit()
+                    raise GrantError("stale dispatch lease; intent moved to UNKNOWN for reconciliation")
+            if row["state"] != "READY":
+                raise GrantError("intent is not claimable; reconcile current state")
+            conn.execute(
+                """UPDATE execution_intents SET state='DISPATCHING', lease_owner=?,
+                   lease_expires_at=?, attempt_count=attempt_count+1, updated_at=?
+                   WHERE intent_id=? AND state='READY'""",
+                (worker_id, expires, now.isoformat(), intent_id),
+            )
+            claimed = conn.execute(
+                "SELECT * FROM execution_intents WHERE intent_id=?", (intent_id,)
+            ).fetchone()
+            conn.commit()
+            return dict(claimed)
+        except Exception:
+            if conn.in_transaction:
+                conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+    def update_intent(self, intent_id: str, *, expected_state: str, new_state: str,
+                      receipt_json: str | None = None, evidence_sha256: str | None = None,
+                      error: str | None = None) -> None:
+        allowed = {
+            "DISPATCHING": {"VERIFY_PENDING", "UNKNOWN"},
+            "VERIFY_PENDING": {"SUCCEEDED", "FAILED", "UNKNOWN"},
+            "UNKNOWN": {"VERIFY_PENDING", "SUCCEEDED", "FAILED"},
+        }
+        if new_state not in allowed.get(expected_state, set()):
+            raise GrantError("illegal execution intent transition")
+        now = datetime.now(timezone.utc).isoformat()
+        conn = self._connect()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            cur = conn.execute(
+                """UPDATE execution_intents SET state=?, receipt_json=COALESCE(?, receipt_json),
+                   evidence_sha256=COALESCE(?, evidence_sha256), last_error=?,
+                   lease_owner=NULL, lease_expires_at=NULL, updated_at=?
+                   WHERE intent_id=? AND state=?""",
+                (new_state, receipt_json, evidence_sha256, error, now, intent_id, expected_state),
+            )
+            if cur.rowcount != 1:
+                raise GrantError("execution intent state changed concurrently")
+            conn.commit()
+        except Exception:
+            if conn.in_transaction:
+                conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+    def get_intent(self, intent_id: str) -> Mapping[str, Any] | None:
+        conn = self._connect()
+        try:
+            row = conn.execute(
+                "SELECT * FROM execution_intents WHERE intent_id=?", (intent_id,)
+            ).fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
+    def list_reconcilable_intents(self) -> list[Mapping[str, Any]]:
+        conn = self._connect()
+        try:
+            rows = conn.execute(
+                "SELECT * FROM execution_intents WHERE state IN ('UNKNOWN','VERIFY_PENDING') ORDER BY created_at"
+            ).fetchall()
+            return [dict(row) for row in rows]
         finally:
             conn.close()
 
@@ -186,6 +339,7 @@ class ApprovalGrantAuthority:
         idempotency_key: str,
         requester_id: str,
         now: datetime | None = None,
+        execution_intent: Mapping[str, Any] | None = None,
     ) -> Mapping[str, Any]:
         if not isinstance(token, str) or token.count(".") != 1:
             raise GrantError("malformed approval grant")
@@ -236,5 +390,20 @@ class ApprovalGrantAuthority:
         if expires.tzinfo is None or issued.tzinfo is None or issued > current or current >= expires:
             raise GrantError("approval grant is expired or not yet valid")
         grant_digest = hashlib.sha256(raw).hexdigest()
-        self._ledger.consume(grant["grant_id"], grant_digest)
+        if execution_intent is None:
+            self._ledger.consume(grant["grant_id"], grant_digest)
+        else:
+            expected_intent = {
+                "intent_id": grant["grant_id"],
+                "task_id": task_id,
+                "idempotency_key": idempotency_key,
+                "operation_json": canonical_json(dict(payload)).decode("utf-8"),
+                "operation_sha256": payload_sha256(payload),
+                "adapter": adapter,
+                "action": action,
+                "target": target,
+            }
+            if dict(execution_intent) != expected_intent:
+                raise GrantError("execution intent does not match verified approval scope")
+            self._ledger.consume_with_intent(grant["grant_id"], grant_digest, expected_intent)
         return grant
