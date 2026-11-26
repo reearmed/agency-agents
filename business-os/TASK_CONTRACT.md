@@ -2,26 +2,39 @@
 
 ## Task envelope
 
+The task envelope is validated by `contracts/task-envelope.schema.json`.
+A budget reservation is part of the immutable `payload` under `_budget`,
+so the approval payload hash binds the operation and the reservation together.
+
 ```json
 {
-  "task_id": "uuid",
-  "business_unit": "norevyo | automation_services | digital_products | shared",
-  "objective": "one measurable outcome",
-  "requester": "authenticated operator or approved system workflow",
-  "risk_tier": "R0 | R1 | R2 | R3 | R4",
-  "data_classification": "public | internal | confidential | restricted",
-  "context_refs": [],
-  "allowed_sources": [],
-  "allowed_tools": [],
-  "forbidden_actions": [],
-  "assigned_agents": [],
-  "budget": {"currency": "USD", "max_amount": 0},
-  "deadline": "ISO-8601 timestamp",
-  "acceptance_criteria": [],
-  "output_schema": {},
-  "approval_id": null
+  "task_id": "task-2026-000001",
+  "business_unit": "norevyo",
+  "task_type": "synthetic_or_internal_task",
+  "risk_tier": "R1",
+  "payload": {
+    "operation": "example",
+    "_budget": {
+      "reservation_id": "budget-res-0001",
+      "amount_minor": 1250,
+      "currency": "USD",
+      "period": "2026-11"
+    }
+  },
+  "created_at": "2026-11-26T12:00:00Z",
+  "expires_at": "2026-11-26T13:00:00Z",
+  "idempotency_key": "task-idempotency-000001",
+  "evidence_refs": []
 }
 ```
+
+`amount_minor` is an integer in the smallest currency unit (for USD/CAD,
+cents); floating-point budget amounts are prohibited. The reservation ID,
+amount, currency and `YYYY-MM` period are included in the signed payload hash.
+The local ledger requires an operator-configured monthly and per-task hard
+limit before it accepts a budgeted intent. Limits are configured once per
+period and cannot be raised through the application API.
+
 
 ## State machine
 
@@ -35,19 +48,20 @@ No transition to `executed` is permitted for R3/R4 without a valid approval obje
 
 ```json
 {
-  "approval_id": "uuid",
-  "task_id": "uuid",
-  "action": "email.send | social.publish | purchase.create | other",
-  "target": "specific account, recipient, environment or resource",
-  "payload_sha256": "hash of exact immutable payload",
-  "amount": null,
-  "currency": null,
-  "risk_tier": "R3",
-  "rollback_plan": "specific compensating action or not reversible",
-  "expires_at": "ISO-8601 timestamp",
-  "decision": "pending | approved | rejected | expired",
-  "approver": null
+  "approval_id": "approval-2026-000001",
+  "task_id": "task-2026-000001",
+  "payload_sha256": "64-character SHA-256 of canonical payload, including _budget",
+  "approver_id": "authenticated-human-subject",
+  "decision": "approved",
+  "approved_at": "2026-11-26T12:05:00Z",
+  "expires_at": "2026-11-26T12:15:00Z",
+  "scope": {
+    "adapter": "mock",
+    "action": "create",
+    "target": "isolated-synthetic-destination"
+  }
 }
 ```
 
-Approval is invalid if any payload field changes. Approval is not transferable to a similar action.
+
+Approval is invalid if any payload field, including budget reservation metadata, changes. Approval is not transferable to a similar action.
