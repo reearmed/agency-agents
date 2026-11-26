@@ -69,9 +69,11 @@ dispatches enter VERIFY_PENDING until reconciliation. Intent transitions
 are recorded in an append-only hash-chained event table.
 
 The durable gateway accepts only the exact `SQLiteMockAdapter` and
-`MockOutcomeVerifier` classes. The synthetic destination stores immutable
-receipts in SQLite, enforces idempotency-key/payload matching, and checks the
-persistent kill switch at the destination boundary. This supports tests across
+`MockOutcomeVerifier` classes. The synthetic destination accepts a new receipt only for an existing
+DISPATCHING approved intent, stores immutable receipts in SQLite, enforces
+idempotency-key/payload matching, and checks the persistent kill switch at the
+destination boundary. It rejects direct unapproved calls and verifies that
+every receipt maps to an immutable execution intent. This supports tests across
 gateway restarts, but it does not make a remote side effect exactly-once: a
 real destination must provide durable idempotency and authoritative lookup
 semantics. The older `execution_gateway.py` remains an in-memory test harness.
@@ -102,7 +104,8 @@ or real adapter is enabled.
 `SQLiteGrantLedger.backup_to(path)` uses SQLite's online backup API to create
 a new private backup file. It refuses to overwrite an existing destination,
 checks SQLite integrity and foreign keys, opens the backup as a new ledger,
-and verifies the execution audit chain and immutable intent records. The
+and verifies the execution audit chain, immutable intent records, budget
+reservations and destination receipts. The
 backup file is created with mode 0600 in a private directory. This is a
 manual local backup helper only; there is no scheduler, off-host copy,
 retention policy or automated restore drill.
