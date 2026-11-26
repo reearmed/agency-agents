@@ -187,6 +187,7 @@ class DurableExecutionTests(unittest.TestCase):
     def test_execution_audit_chain_verifies_and_is_append_only(self):
         result = self.submit()
         self.assertTrue(self.ledger.verify_execution_audit_chain())
+        self.assertTrue(self.ledger.verify_execution_integrity())
         conn = sqlite3.connect(self.db)
         try:
             with self.assertRaises(sqlite3.IntegrityError):
@@ -194,6 +195,35 @@ class DurableExecutionTests(unittest.TestCase):
         finally:
             conn.close()
         self.assertTrue(self.ledger.verify_execution_audit_chain())
+
+    def test_intent_proposal_fields_are_immutable_and_undeletable(self):
+        result = self.submit()
+        conn = sqlite3.connect(self.db)
+        try:
+            with self.assertRaises(sqlite3.IntegrityError):
+                conn.execute(
+                    "UPDATE execution_intents SET operation_json='{}' WHERE intent_id=?",
+                    (result["intent_id"],),
+                )
+            with self.assertRaises(sqlite3.IntegrityError):
+                conn.execute("DELETE FROM execution_intents WHERE intent_id=?", (result["intent_id"],))
+        finally:
+            conn.close()
+        self.assertTrue(self.ledger.verify_execution_integrity())
+
+    def test_privileged_intent_payload_tampering_is_detected(self):
+        result = self.submit()
+        conn = sqlite3.connect(self.db)
+        try:
+            conn.execute("DROP TRIGGER execution_intents_immutable_fields")
+            conn.execute(
+                "UPDATE execution_intents SET operation_json='{"body":"tampered"}' WHERE intent_id=?",
+                (result["intent_id"],),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        self.assertFalse(self.ledger.verify_execution_integrity())
 
     def test_concurrent_workers_cannot_claim_the_same_ready_intent(self):
         from guardrails import canonical_json, payload_sha256
