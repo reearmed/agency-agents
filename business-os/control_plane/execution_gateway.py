@@ -13,7 +13,10 @@ import hashlib
 import threading
 from typing import Any, Mapping
 
-from approval_grants import ApprovalGrantAuthority, GrantError
+if __package__:
+    from .approval_grants import ApprovalGrantAuthority, GrantError
+else:
+    from approval_grants import ApprovalGrantAuthority, GrantError
 
 
 class GatewayError(Exception):
