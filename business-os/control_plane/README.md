@@ -173,3 +173,23 @@ This is not a production control plane:
 
 
 Keep all adapters disconnected until an authenticated control-plane service, independent verifier, durable audit/backup, production-grade authorization tests and incident controls exist.
+
+## HTTP transport boundary (not a deployed service)
+
+`http_api.py` adds a deliberately incomplete stdlib HTTP transport shell. It
+loads the trusted local OpenAPI contract, matches documented paths and methods,
+authenticates protected operations through the injected `IdentityBoundary`,
+and authorizes against server-owned operation policy. It enforces a 64 KiB
+maximum JSON request body, rejects transfer-encoding requests, disables
+request logging and caching, and returns a minimal public `GET /healthz`
+response.
+
+**Only `GET /healthz` is implemented.** Every other documented operation
+returns HTTP 501 after authentication and authorization. No task, artifact,
+approval, budget or kill-switch route is wired to storage. There is no tenant
+data access, TLS, rate limiter, CSRF/session layer, reverse proxy, service
+supervisor or deployment. Bind only to loopback and place behind a separately
+reviewed TLS boundary; do not expose this shell to the internet. The HTTP
+tests use synthetic identities and a loopback ephemeral port only.
+
+The OpenAPI parser dependency is pinned in `requirements-auth.txt`.
