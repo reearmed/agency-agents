@@ -104,3 +104,29 @@ These results validate local reference code only. They do not constitute product
 7. Pinned OpenClaw schema/runtime validation and sandbox smoke tests.
 8. Threat model, dependency review, privacy/legal review and security testing.
 9. Approved infrastructure, model provider and hard spend ceilings.
+
+
+## HTTP transport boundary addition (26 November 2026)
+
+A guarded stdlib HTTP transport shell now exists at
+`control_plane/http_api.py`. It loads the server-owned OpenAPI contract,
+matches documented method/path pairs, authenticates protected routes through
+the existing identity boundary, applies route-level scope/role authorization,
+limits JSON request bodies to 64 KiB, rejects transfer-encoding requests,
+avoids logging request data, and emits no-store JSON responses. It binds only
+to loopback when started through its `serve` entry point.
+
+The only implemented operation is public `GET /healthz`. Every other
+documented operation returns 501 after authentication and authorization.
+There is no task persistence wiring, tenant-scoped data access, artifact
+storage, approval workflow HTTP handler, budget handler, kill-switch handler,
+TLS, rate limiting, reverse proxy, or deployed server. This is transport
+scaffolding, not a usable production API.
+
+Nine synthetic loopback tests were added for health, missing/invalid
+credentials, insufficient scopes, protected-but-unimplemented routes,
+request-size enforcement, unknown routes, and query rejection. The expected
+suite count is now **187 Python tests**, pending a new hosted Actions run. Do
+not count these tests as passing until the workflow completes successfully.
+PyYAML is pinned alongside the JWT verifier dependency because the transport
+loads the trusted YAML OpenAPI contract.
