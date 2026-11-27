@@ -7,7 +7,10 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
-from approval_grants import GrantError, SQLiteGrantLedger
+if __package__:
+    from .approval_grants import GrantError, SQLiteGrantLedger
+else:
+    from approval_grants import GrantError, SQLiteGrantLedger
 
 
 def _ledger(path_text: str, *, require_existing: bool = True) -> SQLiteGrantLedger:
