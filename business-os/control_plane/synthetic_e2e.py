@@ -4,9 +4,14 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from approval_grants import ApprovalGrantAuthority, GrantError, SQLiteGrantLedger
-from durable_execution import DurableMockExecutionGateway, SQLiteMockAdapter
-from execution_gateway import MockOutcomeVerifier
+if __package__:
+    from .approval_grants import ApprovalGrantAuthority, GrantError, SQLiteGrantLedger
+    from .durable_execution import DurableMockExecutionGateway, SQLiteMockAdapter
+    from .execution_gateway import MockOutcomeVerifier
+else:
+    from approval_grants import ApprovalGrantAuthority, GrantError, SQLiteGrantLedger
+    from durable_execution import DurableMockExecutionGateway, SQLiteMockAdapter
+    from execution_gateway import MockOutcomeVerifier
 
 
 def main() -> None:
