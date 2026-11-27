@@ -13,8 +13,12 @@ import hashlib
 import re
 from typing import Any, Callable, Mapping
 
-from guardrails import canonical_json
-from identity_boundary import VerifiedPrincipal, require_scope
+if __package__:
+    from .guardrails import canonical_json
+    from .identity_boundary import VerifiedPrincipal, require_scope
+else:
+    from guardrails import canonical_json
+    from identity_boundary import VerifiedPrincipal, require_scope
 
 
 class VerificationError(RuntimeError):
