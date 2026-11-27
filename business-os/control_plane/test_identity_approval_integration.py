@@ -1,6 +1,7 @@
 """Integration tests connecting verified identity to exact-scope approval grants."""
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 from approval_grants import ApprovalGrantAuthority, GrantError, SQLiteGrantLedger
@@ -45,6 +46,7 @@ class IdentityApprovalIntegrationTests(unittest.TestCase):
 
     def test_verified_human_can_issue_and_consume_exact_scope_grant(self):
         principal = self.boundary.authenticate("Bearer synthetic-oidc-token")
+        grant_time = datetime.fromtimestamp(NOW, timezone.utc)
         token = self.authority.issue(
             task_id="task-identity-1",
             payload=self.payload,
@@ -56,6 +58,7 @@ class IdentityApprovalIntegrationTests(unittest.TestCase):
             approver_id="operator-1",
             auth_context=principal,
             ttl_seconds=120,
+            now=grant_time,
         )
         grant = self.authority.verify_and_consume(
             token,
@@ -66,6 +69,7 @@ class IdentityApprovalIntegrationTests(unittest.TestCase):
             target="synthetic-destination",
             idempotency_key="identity-idem-1",
             requester_id="agent-1",
+            now=grant_time,
         )
         self.assertEqual(grant["approver_id"], "operator-1")
 

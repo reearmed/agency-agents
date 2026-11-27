@@ -2,6 +2,27 @@
 
 **No production systems or live customer data are required.** Tests use synthetic fixtures and isolated mock destinations only.
 
+## Historical GitHub Actions audit
+
+The complete feature-branch Actions run list was retrieved through the GitHub REST API: **327 workflow runs** were returned across four pages. **301 succeeded and 26 failed**. The failures cluster around intermediate commits during rapid incremental development; the current branch later moved beyond those broken intermediate states.
+
+| Failed run(s) | Root cause found in job logs | Disposition |
+|---|---|---|
+| 45891310364 (run 300) | Auth0 test imported PyJWT before the dependency-installation step existed | Dependency installation was added to CI |
+| 45891329453 (301), 45891332610 (302), 45891335000 (303), 45891339682 (304), 45891387917 (305) | Duplicate `max_cached_keys` keyword caused a Python SyntaxError in an intermediate verifier revision | Corrected in subsequent verifier commit |
+| 45891391746 (306), 45891408404 (307), 45891429255 (308), 45891440184 (309), 45891467213 (310), 45891517452 (311) | Expiry-negative test depended on a module-import timestamp and did not remain outside the verifier's clock leeway in the actual test run | Test now derives expiry/issued-at timestamps at execution time and places expiry 120 seconds in the past |
+| 45885368491 (run 247) | Identity-to-approval integration used a fixed identity clock but the grant authority's real wall clock | Test now passes the same explicit UTC instant to grant issuance and consumption |
+| 45876023214 (150) | Budget settlement test attempted settlement before independent terminal reconciliation | Test and evidence-gated settlement flow were updated |
+| 45876736008 (173), 45876746865 (174), 45876752008 (175), 45876784218 (176) | Intermediate budget fixture changes: required budget object was missing, then JSON fixture syntax was malformed | Fixture and schema were corrected |
+| 45877138043 (189) | Durable destination tests had not yet supplied an approved execution intent after the destination boundary was hardened | Tests and gateway intent binding were updated |
+| 45874973038 (120) | Backup test omitted the standard-library `stat` import | Test import was corrected |
+| 45874652682 (103) | Durable gateway tests used the earlier constructor contract after the implementation began requiring an explicit SQLite mock destination and verifier | Tests and implementation contract were brought into alignment |
+| 45874349452 (91) | Intermediate durable execution test file had a syntax error | Corrected in the next revision |
+| 45873958820 (76), 45873912362 (75), 45873865211 (74) | SQLite row access expected named columns before the connection row factory was configured | Row-factory setup was corrected |
+| 45873263806 (62) | Approval grant test fixtures used inconsistent timestamps, so grants were expired at verification | Deterministic clock handling was added |
+
+The latest pre-audit successful run was [45891971022](https://github.com/reearmed/agency-agents/actions/runs/45891971022), with 176 Python tests and the synthetic durable E2E passing. The current audit adds two more tests (178 expected) and corrects the two time-dependent test defects above. The workflow now cancels superseded runs on the same ref so rapid pushes do not leave a queue of stale test runs. Hosted verification of these latest changes is still pending.
+
 ## Critical security tests
 
 | Test | Expected result |

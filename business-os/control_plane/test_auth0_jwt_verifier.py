@@ -13,7 +13,6 @@ from auth0_jwt_verifier import Auth0JWTVerificationError, Auth0JWTVerifier
 
 ISSUER = "https://tenant.ca.auth0.com/"
 AUDIENCE = "https://business-os-api.example/"
-NOW = int(time.time())
 
 
 class FakeJwksClient:
@@ -47,8 +46,8 @@ class Auth0JWTVerifierTests(unittest.TestCase):
             "aud": AUDIENCE,
             "jti": "access-token-123",
             "client_id": "business-os-agent-client",
-            "iat": NOW - 5,
-            "exp": NOW + 300,
+            "iat": int(time.time()) - 5,
+            "exp": int(time.time()) + 300,
             "scope": "business-os:read",
             "https://norevyo.com/claims/roles": ["business-os:operator"],
         }
@@ -69,7 +68,7 @@ class Auth0JWTVerifierTests(unittest.TestCase):
     def test_rejects_invalid_signature(self):
         other = rsa.generate_private_key(public_exponent=65537, key_size=2048)
         token = jwt.encode(
-            {"iss": ISSUER, "sub": "attacker", "aud": AUDIENCE, "jti": "x", "iat": NOW, "exp": NOW + 60},
+            {"iss": ISSUER, "sub": "attacker", "aud": AUDIENCE, "jti": "x", "iat": int(time.time()), "exp": int(time.time()) + 60},
             other,
             algorithm="RS256",
             headers={"kid": "test-key-1", "typ": "at+jwt"},
@@ -84,8 +83,8 @@ class Auth0JWTVerifierTests(unittest.TestCase):
 
     def test_rejects_expired_future_and_missing_required_claims(self):
         cases = (
-            {"exp": NOW - 120},
-            {"iat": NOW + 600},
+            {"exp": int(time.time()) - 120, "iat": int(time.time()) - 300},
+            {"iat": int(time.time()) + 600},
             {"jti": None},
             {"sub": None},
             {"client_id": None},
@@ -97,7 +96,7 @@ class Auth0JWTVerifierTests(unittest.TestCase):
 
     def test_rejects_algorithm_confusion_and_unsigned_tokens_before_jwks_lookup(self):
         unsigned = jwt.encode(
-            {"iss": ISSUER, "sub": "x", "aud": AUDIENCE, "jti": "x", "iat": NOW, "exp": NOW + 60},
+            {"iss": ISSUER, "sub": "x", "aud": AUDIENCE, "jti": "x", "iat": int(time.time()), "exp": int(time.time()) + 60},
             key=None,
             algorithm="none",
             headers={"kid": "test-key-1"},
@@ -153,7 +152,7 @@ class Auth0JWTVerifierTests(unittest.TestCase):
     def test_rejects_auth0_default_profile_without_rfc9068_token_type(self):
         claims = {
             "iss": ISSUER, "sub": "operator-1", "aud": AUDIENCE,
-            "jti": "id", "client_id": "client-1", "iat": NOW, "exp": NOW + 60,
+            "jti": "id", "client_id": "client-1", "iat": int(time.time()), "exp": int(time.time()) + 60,
         }
         token = jwt.encode(claims, self.private_key, algorithm="RS256",
                            headers={"kid": "test-key-1", "typ": "JWT"})
@@ -164,7 +163,7 @@ class Auth0JWTVerifierTests(unittest.TestCase):
     def test_rejects_missing_kid_and_wrong_access_token_type(self):
         claims = {
             "iss": ISSUER, "sub": "operator-1", "aud": AUDIENCE,
-            "jti": "id", "client_id": "client-1", "iat": NOW, "exp": NOW + 60,
+            "jti": "id", "client_id": "client-1", "iat": int(time.time()), "exp": int(time.time()) + 60,
         }
         for headers in ({"typ": "at+jwt"}, {"kid": "test-key-1", "typ": "JWT"}):
             token = jwt.encode(claims, self.private_key, algorithm="RS256", headers=headers)
