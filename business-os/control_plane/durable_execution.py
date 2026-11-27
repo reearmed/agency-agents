@@ -10,9 +10,14 @@ from __future__ import annotations
 import base64
 import json
 from typing import Any, Mapping
-from approval_grants import ApprovalGrantAuthority, GrantError, SQLiteGrantLedger
-from execution_gateway import AdapterReceipt, MockOutcomeVerifier
-from guardrails import canonical_json, payload_sha256
+if __package__:
+    from .approval_grants import ApprovalGrantAuthority, GrantError, SQLiteGrantLedger
+    from .execution_gateway import AdapterReceipt, MockOutcomeVerifier
+    from .guardrails import canonical_json, payload_sha256
+else:
+    from approval_grants import ApprovalGrantAuthority, GrantError, SQLiteGrantLedger
+    from execution_gateway import AdapterReceipt, MockOutcomeVerifier
+    from guardrails import canonical_json, payload_sha256
 
 
 class DurableExecutionError(RuntimeError):
