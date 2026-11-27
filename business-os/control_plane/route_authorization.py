@@ -9,12 +9,20 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from identity_boundary import (
-    BUSINESS_OS_ROLES,
-    BUSINESS_OS_SCOPES,
-    IdentityError,
-    VerifiedPrincipal,
-)
+if __package__:
+    from .identity_boundary import (
+        BUSINESS_OS_ROLES,
+        BUSINESS_OS_SCOPES,
+        IdentityError,
+        VerifiedPrincipal,
+    )
+else:
+    from identity_boundary import (
+        BUSINESS_OS_ROLES,
+        BUSINESS_OS_SCOPES,
+        IdentityError,
+        VerifiedPrincipal,
+    )
 
 
 def authorize_operation(
