@@ -91,6 +91,26 @@ class RouteAuthorizationTests(unittest.TestCase):
             with self.subTest(operation=operation), self.assertRaises(IdentityError):
                 authorize_operation(principal(), operation, default_security=SPEC.get("security"))
 
+    def test_protected_route_rejects_anonymous_or_weaker_security_alternatives(self):
+        base = {
+            "x-required-scopes": ["business-os:read"],
+        }
+        invalid_security = (
+            [{"bearerAuth": []}, {}],
+            [{}, {"bearerAuth": []}],
+            [{"bearerAuth": []}, {"apiKeyAuth": []}],
+            [{"bearerAuth": ["unexpected-scope"]}],
+            [{"bearerAuth": [] , "apiKeyAuth": []}],
+        )
+        for security in invalid_security:
+            operation = {**base, "security": security}
+            with self.subTest(security=security), self.assertRaises(IdentityError):
+                authorize_operation(
+                    principal(),
+                    operation,
+                    default_security=SPEC.get("security"),
+                )
+
     def test_unknown_roles_are_never_authorized(self):
         operation = {
             "security": [{"bearerAuth": []}],
