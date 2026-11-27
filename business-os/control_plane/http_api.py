@@ -145,7 +145,7 @@ def make_handler(
                 principal = None
             else:
                 try:
-                    principal = identity.authenticate_authorization_header(
+                    principal = identity.authenticate(
                         self.headers.get("Authorization", "")
                     )
                 except IdentityError:
