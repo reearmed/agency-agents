@@ -22,6 +22,7 @@ class PackageImportTests(unittest.TestCase):
             "control_plane.independent_verifier",
             "control_plane.route_authorization",
             "control_plane.cli",
+            "control_plane.http_api",
             "control_plane.synthetic_e2e",
         )
         code = (
