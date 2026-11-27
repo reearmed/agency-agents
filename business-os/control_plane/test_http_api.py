@@ -23,8 +23,9 @@ class HttpApiTransportTests(unittest.TestCase):
         now = int(datetime.now(timezone.utc).timestamp())
 
         def verify(token):
-            if token != "valid-test-token":
+            if token not in {"valid-test-token", "read-only-test-token"}:
                 raise ValueError("invalid synthetic token")
+            scopes = "business-os:read business-os:task:submit" if token == "valid-test-token" else "business-os:read"
             return {
                 "iss": "https://issuer.example.test/",
                 "sub": "operator-1",
@@ -32,7 +33,7 @@ class HttpApiTransportTests(unittest.TestCase):
                 "jti": "test-token-1",
                 "iat": now,
                 "exp": now + 300,
-                "scope": "business-os:read business-os:task:submit",
+                "scope": scopes,
                 "roles": [],
             }
 
@@ -85,6 +86,15 @@ class HttpApiTransportTests(unittest.TestCase):
         self.assertEqual(status, 501)
         self.assertEqual(body["error"], "not_implemented")
         self.assertEqual(body["operation"], "submitTask")
+
+    def test_authenticated_principal_without_required_scope_is_forbidden(self):
+        status, body = self.request(
+            "/tasks", method="POST",
+            headers={"Authorization": "Bearer read-only-test-token", "Content-Type": "application/json"},
+            body=b'{"objective":"Prepare a synthetic research brief","portfolio":"shared","risk_tier":"R0","task_type":"research"}',
+        )
+        self.assertEqual(status, 403)
+        self.assertEqual(body["error"], "forbidden")
 
     def test_task_read_is_authenticated_but_not_implemented(self):
         status, body = self.request(
