@@ -20,7 +20,10 @@ import stat
 import secrets
 from typing import Any, Callable, Mapping
 
-from guardrails import canonical_json, payload_sha256
+if __package__:
+    from .guardrails import canonical_json, payload_sha256
+else:
+    from guardrails import canonical_json, payload_sha256
 
 
 class GrantError(Exception):
