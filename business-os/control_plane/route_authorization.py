@@ -41,10 +41,17 @@ def authorize_operation(
             raise IdentityError("public operation cannot declare privileged requirements")
         return
 
-    if not isinstance(security, list) or not security or not any(
-        isinstance(item, Mapping) and "bearerAuth" in item for item in security
+    # OpenAPI security arrays are OR alternatives. Accepting merely one
+    # bearerAuth entry would accidentally permit an empty-object (anonymous)
+    # alternative or an unsupported weaker scheme alongside it.
+    if (
+        not isinstance(security, list)
+        or len(security) != 1
+        or not isinstance(security[0], Mapping)
+        or set(security[0]) != {"bearerAuth"}
+        or security[0].get("bearerAuth") != []
     ):
-        raise IdentityError("protected operation must require bearer authentication")
+        raise IdentityError("protected operation must require only bearer authentication")
 
     if (
         not isinstance(scopes, list)
