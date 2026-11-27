@@ -20,10 +20,16 @@ import sqlite3
 import stat
 from typing import Any, Iterator, Mapping
 
-from guardrails import (
-    Approval, ApprovalError, AuditError, BudgetError, GuardrailError,
-    StateError, TaskState, canonical_json, parse_time, payload_sha256,
-)
+if __package__:
+    from .guardrails import (
+        Approval, ApprovalError, AuditError, BudgetError, GuardrailError,
+        StateError, TaskState, canonical_json, parse_time, payload_sha256,
+    )
+else:
+    from guardrails import (
+        Approval, ApprovalError, AuditError, BudgetError, GuardrailError,
+        StateError, TaskState, canonical_json, parse_time, payload_sha256,
+    )
 
 
 def _reject_symlink_components(path: Path) -> None:
