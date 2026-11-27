@@ -141,19 +141,22 @@ def make_handler(
             if method in {"POST", "PUT", "PATCH"} and not self._body_is_bounded_json():
                 return
 
-            try:
-                if operation.get("security", contract["security"]) == []:
-                    principal = None
-                else:
+            if operation.get("security", contract["security"]) == []:
+                principal = None
+            else:
+                try:
                     principal = identity.authenticate_authorization_header(
                         self.headers.get("Authorization", "")
                     )
+                except IdentityError:
+                    self._send(401, {"error": "unauthorized"})
+                    return
+            try:
                 authorize_operation(
                     principal, operation, default_security=contract["security"]
                 )
             except IdentityError:
-                self._send(401 if not self.headers.get("Authorization") else 403,
-                           {"error": "unauthorized"})
+                self._send(403, {"error": "forbidden"})
                 return
 
             operation_id = operation.get("operationId")
