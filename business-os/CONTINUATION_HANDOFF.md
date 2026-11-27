@@ -152,13 +152,16 @@ Two documentation-only writes were accidentally sent to `main` because the branc
 
 ## Next safe work to continue
 
-1. Inspect the current branch head and CI again.
-2. Add integration tests proving `human_approver_identity_verifier` works with `ApprovalGrantAuthority.issue` and rejects forged/non-human contexts.
-3. Review the identity boundary for claim edge cases and add a machine-readable API request/response contract or OpenAPI spec; do not pretend the spec is a deployed service.
-4. Define an independent verifier contract and evidence schema, with mock-only tests.
-5. Review durable outbox crash windows, budget reconciliation, kill-switch races and backup recovery.
-6. Update the handoff and acceptance record with verified CI evidence after each code batch.
-7. Keep all adapters mock-only until the API, IdP, independent verifier, multi-host store and operator controls have passed review.
+1. Verify hosted CI for the latest transport-shell commit; expected suite count is 187 Python tests. The latest Actions API snapshot still showed run 327 on older commit `7a29a9d`; do not assume newer commits have been tested.
+2. Review and harden `control_plane/http_api.py` and its nine loopback tests. It currently implements only public `GET /healthz`; all protected business operations deliberately return 501 after authentication and authorization.
+3. Implement tenant-scoped task persistence before enabling `POST /tasks`; current SQLite task tables do not contain tenant ownership, so do not expose task reads/writes yet.
+4. Add schema validation for each future request handler using the server-owned OpenAPI request schema; reject unknown fields and malformed identifiers.
+5. Implement task submission with transactional idempotency and tenant ownership, then tests for cross-tenant isolation, duplicate submissions, malformed JSON, request limits and audit atomicity.
+6. Wire artifact staging only after a private artifact store, content hash verification, tenant authorization and retention controls exist.
+7. Wire approval request/decision only after authenticated human identity, requester/approver separation, exact payload binding and audit persistence are end-to-end integrated.
+8. Implement period budget configuration only with an independently authenticated budget operator and immutable limits; keep paid execution disabled.
+9. Keep all execution routes absent. No real adapter or worker should be exposed until multi-host coordination, independent destination verification, external kill switch, off-host backup and restore drills are proven.
+10. Update the handoff and acceptance record with actual hosted test evidence after each code batch. Do not label the shell deployed or production-ready.
 
 ## Continuation prompt
 
